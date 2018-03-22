@@ -17,15 +17,18 @@ import time
 
 class WestlawScraper:
   """
-  Class for downloading documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
+    Class for downloading documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
 
-  URLs below searched Westlaw database using the Keynumbers w.r.t. II. PATENTABILITY AND VALIDITY, k421-k850. Jurisdiction is set to be CAFC, and the date is from Oct. 01. 1982 to Feb. 28. 2018. The first URL searched subsection A~D(k421~k670), and the second one searched E~F(k671~k850).
+  URLs below searched Westlaw database using the Keynumbers w.r.t. II. PATENTABILITY AND VALIDITY, k421-k850. 
+  Jurisdiction is set to be CAFC, and the date is from Oct. 01. 1982 to Feb. 28. 2018. 
 
+  The first URL searched subsection A~D(k421~k670), and the second one searched E~F(k671~k850).
+
+  URL:
   https://1.next.westlaw.com/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad7403700000161daec100b39b6860d&tocGuid=I4aee2539c6f64c1812a4c2f3395c2607&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad7403700000161daeb6af2c184cc7d&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
-
   https://1.next.westlaw.com/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad7403700000161daebd44539b685d6&tocGuid=I4aee2539c6f64c1812a4c2f3395c2607&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad7403700000161daea8262c184cc6b&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
 
-  Example::
+  Example(Should be changed)::
 
       downloader = WestlawScraper(mass_download_mode=True)
       for (content, (doc_index, doc_count)) in downloader.iter_search_results(6318, 'DATE(=1987)'):
@@ -36,9 +39,11 @@ class WestlawScraper:
 
   _RE_STYLESHEET = re.compile(r'\<STYLE TYPE\=\"text\/css\"\>(\<\!\-\-)?(?P<css_string>.+?)(\-\-\>)?\<\/STYLE\>', flags=re.S | re.U | re.I)
   _RE_LEXIS_DOC = re.compile(r'\<DOC NUMBER\=(?P<docid>\d+)\>\s+\<DOCFULL\>(?P<doc>.+?)\<\/DOCFULL\>', flags=re.S | re.U | re.I)
- # _RE_STYLESHEET = re.compile(ur'\<STYLE TYPE\=\"text\/css\"\>(\<\!\-\-)?(?P<css_string>.+?)(\-\-\>)?\<\/STYLE\>', flags=re.S | re.U | re.I)
- #  _RE_LEXIS_DOC = re.compile(ur'\<DOC NUMBER\=(?P<docid>\d+)\>\s+\<DOCFULL\>(?P<doc>.+?)\<\/DOCFULL\>', flags=re.S | re.U | re.I)
- # re.compile(ur ~~~) is the original form. Jay Jung changed it to re.compile(r ~~~)
+
+# re.compile(ur ~~~) is the original form. Jay Jung changed it to re.compile(r ~~~)
+# _RE_STYLESHEET = re.compile(ur'\<STYLE TYPE\=\"text\/css\"\>(\<\!\-\-)?(?P<css_string>.+?)(\-\-\>)?\<\/STYLE\>', flags=re.S | re.U | re.I)
+#  _RE_LEXIS_DOC = re.compile(ur'\<DOC NUMBER\=(?P<docid>\d+)\>\s+\<DOCFULL\>(?P<doc>.+?)\<\/DOCFULL\>', flags=re.S | re.U | re.I)
+
   def __init__(self, wait_timeouts=(15, 1800), documents_per_download=(250, 500), user_agent_string='Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0', mass_download_mode=False):
     """
     Constructs a downloader object.
