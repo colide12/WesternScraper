@@ -1,6 +1,9 @@
 import random
 import re
 import requests
+import time
+import os
+
 import urllib.request, urllib.parse, urllib.error
 from urllib.parse import urlparse
 
@@ -13,11 +16,10 @@ import selenium.webdriver.support.ui
 from selenium.webdriver.support import expected_conditions
 
 from logIn import logInToSNU
-import time
 
 class WestlawScraper:
   """
-    Class for downloading documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
+	Class for downloading documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
 
   URLs below searched Westlaw database using the Keynumbers w.r.t. II. PATENTABILITY AND VALIDITY, k421-k850. 
   Jurisdiction is set to be CAFC, and the date is from Oct. 01. 1982 to Feb. 28. 2018. 
@@ -25,9 +27,9 @@ class WestlawScraper:
   The first URL searched subsection A~D(k421~k670), and the second one searched E~F(k671~k850).
 
   URL:
-  https://1.next.westlaw.com/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad7403700000161daec100b39b6860d&tocGuid=I4aee2539c6f64c1812a4c2f3395c2607&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad7403700000161daeb6af2c184cc7d&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
-  https://1.next.westlaw.com/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad7403700000161daebd44539b685d6&tocGuid=I4aee2539c6f64c1812a4c2f3395c2607&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad7403700000161daea8262c184cc6b&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
-
+  1) http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad6ad3a000001625941c6eb3d80e251&tocGuid=I2501c862419b7f95f8720560c638baee&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad6ad3a000001625941006af9d8901f&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
+  2) http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad6ad3a0000016259442d083d8102b9&tocGuid=I2501c862419b7f95f8720560c638baee&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad6ad3a0000016259434b96f9d8910d&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
+ 
   Example(Should be changed)::
 
       downloader = WestlawScraper(mass_download_mode=True)
@@ -37,6 +39,18 @@ class WestlawScraper:
   This code uses `Geckodriver`__ and `Selenium Webdriver <http://www.seleniumhq.org/>`__ to scrape Westlaw pages.
   """
 
+  if os.name == 'nt':
+      DOWNLOAD_DIR = "C:"+os.environ['HOMEPATH']+"\\Downloads"
+      HISTORY_DIR = "\\Shepards"
+      SOURCE_DIR = "\\Sources"
+  else:
+      DOWNLOAD_DIR = os.environ['HOME']+"/Downloads"
+      HISTORY_DIR = "/Shepards/"
+      SOURCE_DIR = "/Sources/"
+  VERSION_NUM = "1.3.20"
+  editor_abbreviation = None
+  author_abbreviation = None
+
   _RE_STYLESHEET = re.compile(r'\<STYLE TYPE\=\"text\/css\"\>(\<\!\-\-)?(?P<css_string>.+?)(\-\-\>)?\<\/STYLE\>', flags=re.S | re.U | re.I)
   _RE_LEXIS_DOC = re.compile(r'\<DOC NUMBER\=(?P<docid>\d+)\>\s+\<DOCFULL\>(?P<doc>.+?)\<\/DOCFULL\>', flags=re.S | re.U | re.I)
 
@@ -44,38 +58,30 @@ class WestlawScraper:
 # _RE_STYLESHEET = re.compile(ur'\<STYLE TYPE\=\"text\/css\"\>(\<\!\-\-)?(?P<css_string>.+?)(\-\-\>)?\<\/STYLE\>', flags=re.S | re.U | re.I)
 #  _RE_LEXIS_DOC = re.compile(ur'\<DOC NUMBER\=(?P<docid>\d+)\>\s+\<DOCFULL\>(?P<doc>.+?)\<\/DOCFULL\>', flags=re.S | re.U | re.I)
 
-  def __init__(self, wait_timeouts=(15, 1800), documents_per_download=(250, 500), user_agent_string='Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0', mass_download_mode=False):
+  def __init__(self, urlWestlaw, wait_timeouts=(15, 1800)):
     """
     Constructs a downloader object.
 
     :param float,float wait_timeouts: tuple of `(short, long)` where `short` and `long` are the no. of seconds to wait while page elements are loaded (for Webdriver). `long` timeout is used when waiting for LexisNexis to format documents for mass downloads.
-    :param int,int documents_per_download: a range specifying the number of documents to download each time when using :attr:`mass_download_mode`.
-    :param str user_agent_string: the user agent string that PhantomJS should declare itself to be.
-    :param bool mass_download_mode: whether to mass download articles using the download link or page through each document one by one and download.
+    :param  str  url for Westlaw keynumber search. 2 urls stated above.
     """
-
-    self._USER_AGENT_STRING = user_agent_string
-    self._DOCUMENTS_PER_DOWNLOAD = documents_per_download
-
-    # desired_capabilities = dict(selenium.webdriver.common.desired_capabilities.DesiredCapabilities.PHANTOMJS)
-    # desired_capabilities['phantomjs.page.settings.userAgent'] = self._USER_AGENT_STRING
-
-    self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
+    
+    self.profile = self.create_browser_profile()
+    self._driver = self.get_driver(self.profile)  
+    # self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
     # self._driver.set_window_size(800, 600)
-
     self._short_wait = selenium.webdriver.support.ui.WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
     self._long_wait = selenium.webdriver.support.ui.WebDriverWait(self._driver, wait_timeouts[1], poll_frequency=1)
 
-    self.mass_download_mode_ = mass_download_mode
-
-  #end def
+    self.urlWestlaw = urlWestlaw
+  # end def
 
   def logInToSNU(self):
     # self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
-    self._driver.get('http://lib.snu.ac.kr')
+    self._driver.get('https://lib.snu.ac.kr')
     startLogin = self._driver.find_element_by_css_selector("#top-user-menu-additional > div:nth-child(2) > a:nth-child(1)")
     startLogin.click()
-    time.sleep(2) # expected_conditions 코드를 사용하면 좀 더 최적화 가능
+    time.sleep(1) # expected_conditions 코드를 사용하면 좀 더 최적화 가능, 그런데 왜인지 모르겠지만 is not reachable by keyboard
     ID = self._driver.find_element_by_css_selector("#edit-si-id")
     # ID.send_keys(input("Your ID: "))
     ID.send_keys('jjy911018')
@@ -85,210 +91,244 @@ class WestlawScraper:
     loginButton = self._driver.find_element_by_css_selector("#edit-actions--2 > input:nth-child(1)")
     loginButton.click()
     return self._driver
- # end of def
+  # end of def
+  
+  def Westlaw_appears(self, current_handle_or_xpath, isWindow):
+        # isWindow = 1: detect whether Westlaw homepage loaded
+        #          = 0: detect whether keynumber link loaded, detect whether patent link loaded, detect whether patent-sub link loaded
+
+        def f(driver):
+          for handle in driver.window_handles:
+            if current_handle_or_xpath != handle:
+              driver.switch_to.window(handle)  # switch first to check window title
+              if driver.title.endswith('Westlaw'): return True  # this is our new window!/JY:check if the title ends with 'Download Documents'
+            #end if
+          #end for
+
+          return False # JY: this probably means an error
+        #end def
+
+        def g(driver):
+          if expected_conditions.visibility_of_any_elements_located((selenium.webdriver.common.by.By.XPATH, current_handle_or_xpath)):
+            # keyNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div[1]/ul/li[2]/a').get_attribute('href')
+            keyNumber = self._driver.find_element_by_xpath(current_handle_or_xpath).get_attribute('href')
+            print(keyNumber)
+            return True
+
+          return False
+        # end of def
+
+        if isWindow == 1: return f
+        else: return g
+  # end of def
+        
+  def MoveToWestLaw(self):
+
+    # move to academic DB in SNU library
+    self._driver.get('http://library.snu.ac.kr/find/databases')
+    
+    # move to Westlaw main page
+    self._wait_for_element('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[4]/div/div[2]/ul/li[23]')
+    wButton = self._driver.find_element_by_xpath('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[4]/div/div[2]/ul/li[23]')
+    wButton.click()
+    self._wait_for_element('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[5]/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]/div')
+    goToWestlaw = self._driver.find_element_by_xpath('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[5]/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]/div')
+    goToWestlaw.click()
+    parent_window_handle = self._driver.current_window_handle 
+    self._wait_for_element('/html/body/div[5]/div/form/input[4]')
+    confirmWestlaw = self._driver.find_element_by_xpath('/html/body/div[5]/div/form/input[4]')
+    confirmWestlaw.click()
+    self._long_wait.until(self.Westlaw_appears(parent_window_handle, 1))  
+  
+    # move to keynumber
+    self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div[1]/ul/li[2]/a', 0))
+    keyNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div[1]/ul/li[2]/a').get_attribute('href')
+    self._driver.get(keyNumber)
+
+    # move to keynumber-patent
+    self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[3]/ul[3]/li[4]/div/a[1]', 0))
+    keyNumber_patent = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[3]/ul[3]/li[4]/div/a[1]').get_attribute('href')
+    self._driver.get(keyNumber_patent)
+
+    # # move to invalidation cases
+    # self._long_wait.until(Westlaw_appears('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[2]/div[2]/div/a', 0))
+    # keyNumber_patent_invalidation = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[2]/div[2]/div/a').get_attribute('href')
+    # self._driver.get(keyNumber_patent_invalidation)
+       
+   # end of def
+
 
   def __del__(self):
     try: self._driver.quit()
     except: pass
+ 
 
-  def iter_search_results(self, csi, search_query, start_from=1):
+
+  def iter_search_results(self, start_from=1):
     """
     A generator function that executes LexisNexis search query on source data CSI (:attr:`csi`), with query :attr:`search_query` and downloads all documents returned by search.
-
-    :param str csi: LexisNexis CSI (see `<http://amdev.net/rpt_download.php>`_ for full list). e.g. Federal Circuit - US Court of Appeals Cases(csi = 6396)
-    :param str search_query: execute search query string.
+    :param str url: 
     :param int start_from: document index to start downloading from.
     :returns: a tuple `(doc_content, (index, results_count))`, where `doc_content` is the HTML content of the `index`th document, and `results_count` is the number of documents returned by specified search query.
     """
+
     self.logInToSNU()
     time.sleep(2)
-    self._driver.get('http://libproxy.snu.ac.kr/_Lib_Proxy_Url/www.lexisnexis.com/hottopics/lnacademic/?' + urllib.parse.urlencode({'verb': 'sr', 'csi': csi, 'sr': search_query}))
+    self.MoveToWestLaw()
+    self._driver.get('http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTA%2CCTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad7403700000162a6b3ab2d060783de&tocGuid=I4aee2539c6f64c1812a4c2f3395c2607&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad7403700000162a6b3037a81498199&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)')
+    selectSet = ('//*[@id="coid_browseShowCheckboxes"]',           # 0 Specify Content to Search selection box
+                 '//*[@id="I57197764642a01705dd361fff15ee4f9"]',   # 1 Selection box A
+                 '//*[@id="Idb2f23ddf74a790d1b0699b1c12b6422"]',   # 2 Selection box B
+                 '//*[@id="I146adefaf1f3cb67acd36a561222fec5"]',   # 3 Selection box C
+                 '//*[@id="Id841cb612743d076ea11140558a11feb"]',   # 4 Selection box D
+                 '//*[@id="I7ea157dafea7a8113db636840c9fb6f6"]',   # 5 Selection box E
+                 '//*[@id="I049b6daeada85ffe53b43521991c5817"]',   # 6 Selection box F
+                 'jurisdictionIdInner',                  # 7 Select Option  //*[@id="jurisdictionIdInner"]
+                 '//*[@id="co_fed_CTA"]',                          # 8 Selection box Court of Appeals
+                 '//*[@id="co_fed_CTAF"]',                         # 9 Selection box Federal Court  
+                 '//*[@id="co_jurisdictionSave"]',                 # 10 save 
+                 '//*[@id="searchButton"]',                        # 11 search botton 
+                 #'//*[@id="jurisdictionTDBabFpHVnlZV3dfRVF8Um1Wa1pYSmhiQV9FUV9FUQ_EQ_EQLink"]' # 12 expand Federal
+                 'jurisdictionTDBabFpHVnlZV3dfRVF8Um1Wa1pYSmhiQV9FUV9FUQ_EQ_EQLink',
+                 # '//*[@id="jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHp8UTNSekxpQnZaaUJCY0hCbFlXeHo_EQLink"]', # 13 expand Ct. of Appeals
+                 'jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHp8UTNSekxpQnZaaUJCY0hCbFlXeHo_EQLink',
+                 # '//*[@id="facet_hierarchy_jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHp8UTNSekxpQnZaaUJCY0hCbFlXeHo_EQ"]', # 14 select FC
+                 'facet_hierarchy_jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHpMMFpsWkdWeVlXd2dRMmx5TGdfRVFfRVF8Um1Wa1pYSmhiQ0JEYVhJdQ_EQ_EQ',
+                 'co_dateWidget_date_dropdown_span',    # 15 date setting
+                 'All Dates After', # 16 click to set date after a certain day
+                 '//*[@id="co_dateWidgetCustomRangeText_date_after"]', # 17 put in the 'certain' day
+                 '//*[@id="co_dateWidgetCustomRangeDoneButton_date_after"]', # 18 confirm the date
+                 '//*[@id="co_multifacet_selector_2_applyFacetFilter"]', # 19 apply the filter
+                 '//*[@id="cobalt_result_headnote_title1"]'             # 20 first document
+                 ) 
+    for i in range(2):
+      self._wait_for_element(selectSet[0])
+      self._driver.find_element_by_xpath(selectSet[0]).click() # Click Specify Content To Search
+
+      # self._wait_for_element(selectSet[1])
+      time.sleep(0.5)
+      for j in range(1+(2*i),3+(2*i)):
+        self._driver.find_element_by_xpath(selectSet[j]).click() # Select Search boxes from A to B
+      # end for
+   
+      self._driver.find_element_by_id(selectSet[7]).click() # click option
+      self._wait_for_element(selectSet[8])
+      for k in range(8,11):
+        self._driver.find_element_by_xpath(selectSet[k]).click() # Select CoA and FC and save
+
+      # self._wait_for_element(selectSet[11])
+      time.sleep(0.5)
+      self._driver.find_element_by_xpath(selectSet[11]).click()
+
+      # put in several search options
+      # self._long_wait.until(self.Westlaw_appears(selectSet[16], 0))
+      time.sleep(20)
+      # self._driver.find_element_by_xpath(selectSet[12]).click()
+      # self._driver.find_element_by_xpath(selectSet[13]).click()
+      self._driver.find_element_by_id(selectSet[12]).click()
+      print('12')
+      wait_for_page_load(self._driver)
+      self._driver.find_element_by_id(selectSet[13]).click()
+      print('13')
+      wait_for_page_load(self._driver)
+      time.sleep(5)
+      self._driver.find_element_by_id(selectSet[14]).click()
+      # self._long_wait.until(self.Westlaw_appears(selectSet[15], 0))
+      time.sleep(10)
+      self._driver.find_element_by_id(selectSet[15]).click()
+      wait_for_page_load(self._driver)
+      time.sleep(10)
+      self._driver.find_element_by_link_text(selectSet[16]).click()
+      self._driver.find_element_by_xpath(selectSet[17]).click()
+      self._driver.find_element_by_xpath(selectSet[17]).send_keys('1982.10.01')
+      self._driver.find_element_by_xpath(selectSet[18]).click()
+      self._driver.find_element_by_xpath(selectSet[19]).click()
+      self._long_wait.until(self.Westlaw_appears(selectSet[20], 0))
+      firstDocURL = self._driver.find_element_by_xpath(selectSet[20]).get_attribute('href')
+      self._driver.get(firstDocURL)
+      self._sequential_download()
+    # end for
+
+    # self._driver.get(self.urlWestlaw)
+    time.sleep(100)
     # selenium.webdriver.common.action_chains.ActionChains(self._driver).send_keys('jjy911018').send_keys(u'\ue004').send_keys('?').send_keys(u'\ue006') # 로그인을 위한 코드인데 수정이 필요할 듯. 따로 pyㅠ파일을 만들 생각
 
-    if not self._have_results(): return []
+    # if not self._have_results(): return []
 
-    if self.mass_download_mode_: return self._mass_download(start_from)
-    return self._sequential_download(start_from)
-  #end def
+    # self._sequential_download(start_from)
+  # end def
 
-  def _have_results(self):  # todo: kinda slow, due to having wait for multiple timeouts
-    self._switch_to_frame('main')
-    if self._wait_for_element('//td[text()[contains(., \'No Documents Found\')]]', raise_error=False) is not None: return False
-    if self._wait_for_element('//frame[@title=\'Results Content Frame\']', raise_error=False) is not None: return True
-    if self._wait_for_element('//frame[@title=\'Results Document Content Frame\']', raise_error=False) is not None: return True
-
-    raise Exception('Page loaded improperly while checking for results frame.')
-  #end def
-
-  def _mass_download(self, start_from=1):  # Returns documents as a list of strings containing HTML
-    self._switch_to_frame('navigation')
-
-    try:
-        documents_count = int(self._driver.find_element_by_xpath('//form[@name=\'results_docview_DocumentForm\']/input[@name=\'totalDocsInResult\']').get_attribute('value'))
-        # print(documents_count)
-    except: documents_count = -1
-
-    def download_sequence(start, end):
-      docs_left = end - start + 1
-      cur = start
-      while docs_left > self._DOCUMENTS_PER_DOWNLOAD[1]:
-        download_count = random.randint(*self._DOCUMENTS_PER_DOWNLOAD)
-        yield (cur, cur + download_count - 1)
-        docs_left -= download_count
-        cur += download_count
-      #end while
-
-      yield (cur, cur + docs_left - 1)
-    #end def
-
-    def lexis_nexis_download_window_appears(current_handle):
-      def f(driver):
-        for handle in driver.window_handles:
-          if current_handle != handle:
-            driver.switch_to.window(handle)  # switch first to check window title
-            if driver.title.endswith('Download Documents'): return True  # this is our new window!
-          #end if
-        #end for
-
-        return False
-      #end def
-
-      return f
-    #end class
-
-    for download_start, download_end in download_sequence(start_from, documents_count):
-      self._switch_to_frame('navigation')
-
-      parent_window_handle = self._driver.current_window_handle
-
-      # check for download icon and click it
-      self._wait_for_element('//img[@title=\'Download Documents\']').click()
-
-      # wait for download window to appear
-      self._short_wait.until(lexis_nexis_download_window_appears(parent_window_handle))
-      self._wait_for_element('//img[@title=\'Download\']')
-
-      # get all the form items
-      selenium.webdriver.support.ui.Select(self._driver.find_element_by_xpath('//select[@name=\'delFmt\']')).select_by_value('QDS_EF_HTML')
-      selenium.webdriver.support.ui.Select(self._driver.find_element_by_xpath('//select[@name=\'delView\']')).select_by_value('GNBFI')
-      selenium.webdriver.support.ui.Select(self._driver.find_element_by_xpath('//select[@name=\'delFontType\']')).select_by_value('COURIER')  # i like courier
-
-      search_term_bold = self._driver.find_element_by_xpath('//input[@type=\'checkbox\'][@id=\'termBold\']')
-      if not search_term_bold.is_selected(): search_term_bold.click()
-      doc_new_page = self._driver.find_element_by_xpath('//input[@type=\'checkbox\'][@id=\'docnewpg\']')
-      if not doc_new_page.is_selected(): doc_new_page.click()
-
-      self._driver.find_element_by_xpath('//input[@type=\'radio\'][@id=\'sel\']').click()
-      self._driver.find_element_by_xpath('//input[@type=\'text\'][@id=\'rangetextbox\']').send_keys('{}-{}'.format(download_start, download_end))
-
-      self._driver.find_element_by_xpath('//img[@title=\'Download\']').click()
-
-      download_url = self._long_wait.until(expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.XPATH, '//center[@class=\'suspendbox\']/p/a'))).get_attribute('href')
-
-      # set up cookies and use requests library to do download
-      cookies = dict([(cookie['name'], cookie['value']) for cookie in self._driver.get_cookies()])
-      response = requests.get(download_url, cookies=cookies, headers={'User-Agent': self._USER_AGENT_STRING})
-      html_content = response.text
-
-      m = self._RE_STYLESHEET.search(html_content)
-      css_string = m.group('css_string').strip()
-
-      for i, m in enumerate(self._RE_LEXIS_DOC.finditer(html_content)):
-        page_content = m.group('doc').replace('<!-- Hide XML section from browser', '').replace('-->', '').strip()
-        page_content = '\n'.join(['<HTML>', '<HEAD>', '<STYLE TYPE=\"text/css\">', css_string, '</STYLE>', '</HEAD>', '<BODY>', page_content, '</BODY>', '</HTML>'])
-
-        yield (page_content, (download_start + i, documents_count))
-      #end for
-
-      self._driver.close()
-      self._driver.switch_to.window(parent_window_handle)
-    #end for
-  #end def
-
-  def _sequential_download(self, start_from=1):
-    self._switch_to_frame('navigation')
-    try: documents_count = int(self._driver.find_element_by_xpath('//form[@name=\'results_docview_DocumentForm\']/input[@name=\'totalDocsInResult\']').get_attribute('value'))
-    except: documents_count = -1
-    if documents_count <= 0: return
-
-    if start_from > documents_count: return
-
-    if documents_count == 1:
-      self._switch_to_frame('content')
-      page_content = self._driver.page_source
-      yield (page_content, (1, 1))
-      return
-    #end if
-
-    self._switch_to_frame('results')  # go to results list and grab the first link
-    first_document_url = self._wait_for_element('//td/a[contains(@href, \'/lnacui2api/results/docview/docview.do\')]').get_attribute('href')
-
-    url_obj = urlparse.urlparse(first_document_url)
-    qs_dict = dict(urlparse.parse_qsl(url_obj.query))
-    qs_dict['docNo'] = start_from
-    doc_url = urlparse.urlunparse((url_obj.scheme, url_obj.netloc, url_obj.path, url_obj.params, urllib.parse.urlencode(qs_dict), url_obj.fragment))
-    self._driver.get(doc_url)  # jump to the page we want
-
-    # qs_dict['RELEVANCE'] = 'BOOLEAN'  # doesnt seem to work
-    # http://www.lexisnexis.com/lnacui2api/results/docview/docview.do?docLinkInd=true&risb=21_T21153102977&format=GNBFI&sort=RELEVANCE&startDocNo=1&resultsUrlKey=29_T21153102981&cisb=22_T21153102980&treeMax=true&treeWidth=0&csi=6318&docNo=1
-
-    for doc_index in range(start_from, documents_count + 1):
-      self._switch_to_frame('content', in_iframe=False)
-      page_content = self._driver.page_source
-      yield (page_content, (doc_index, documents_count))
-
-      self._switch_to_frame('navigation', in_iframe=False)
-      next_page_elem = self._wait_for_element('//img[@title=\'View next document\']', raise_error=False)
-      if next_page_elem is None:
-        if doc_index != documents_count:
-          raise Exception('Next page icon could not be found: doc_index={}, documents_count={}'.format(doc_index, documents_count))
-      else: next_page_elem.click()
-    #end while
-  #end def
-
-  def _switch_to_frame(self, frame_name, in_iframe=True):
-    self._driver.switch_to.default_content() # this command initializes the frame you are in.
-
-    if in_iframe:
-      frame = self._safe_wait(expected_conditions.frame_to_be_available_and_switch_to_it('mainFrame'))
-      if not frame: raise SwitchFrameException(frame_name)
-    #end if
-
-    try:
-      if frame_name == 'main': return frame
-      elif frame_name == 'results': frame = self._wait_for_element('//frame[@title=\'Results Content Frame\']')
-      elif frame_name == 'navigation': frame = self._wait_for_element('//frame[@title=\'Results Navigation Frame\']')
-      elif frame_name == 'content': frame = self._wait_for_element('//frame[@title=\'Results Document Content Frame\']')
-    except selenium.common.exceptions.TimeoutException:
-      raise SwitchFrameException(frame_name)
-
-    self._safe_wait(expected_conditions.frame_to_be_available_and_switch_to_it(frame))
-
-    return frame
-  #end def
-
+  def _sequential_download(self):
+    
+    pass
+  # end of def  
+  
   def _safe_wait(self, poll_func):
     try: return self._short_wait.until(poll_func)
     except selenium.common.exceptions.TimeoutException: return None
-  #end def
+  # end def
 
   def _wait_for_element(self, xpath, raise_error=True):
     elem = self._safe_wait(expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.XPATH, xpath)))
     if raise_error and elem is None: raise selenium.common.exceptions.TimeoutException(msg='XPath \'{}\' presence wait timeout.'.format(xpath))
     return elem
-  #end def
-#end class
+
+  def get_driver(self, profile):
+    # get firefox driver (start firefox)
+    # using profile created in create_browser_profile()
+
+    self._driver = webdriver.Firefox(firefox_profile=profile)
+    return self._driver
+
+  def create_browser_profile(self):
+    # change profile to remove download dialog box
+    profile = webdriver.FirefoxProfile()
+    profile.set_preference('browser.download.folderList', 0) # custom location
+    profile.set_preference('browser.download.manager.useWindow', False)
+    profile.set_preference('browser.download.manager.showWhenStarting', False)
+    profile.set_preference('browser.download.dir', self.DOWNLOAD_DIR)
+    profile.set_preference('browser.download.manager.focusWhenStarting', False)
+    profile.set_preference('browser.helperApps.alwaysAsk.force', False)
+    profile.set_preference('services.sync.prefs.sync.browser.download.manager.showWhenStarting', False)
+    profile.set_preference('pdfjs.disabled', True)
+    profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/pdf')
+    return profile
+
+# log in to the library
+
+# go to Westlaw website
+
+# move to the keynumber search results
+
+# do sequential download(click the first doc, and download html, and then click next doc.)
 
 
-class SwitchFrameException(Exception):
-  """
-  Exception class when we are unable to load the require page properly.
-  This is usually due to
-  #. Page taking too long to load. This happens sometimes when loading LexisNexis for the first time.
-  #. Improper page loading.
-  """
 
-  def __init__(self, frame_name): self.frame_name = frame_name
 
-  def __str__(self): return 'Exception while switching to frame \'{}\'.'.format(self.frame_name)
-#end class
+class wait_for_page_load(object):
+
+    def __init__(self, browser):
+        self.browser = browser
+
+    def __enter__(self):
+        self.old_page = self.browser.find_element_by_tag_name('html')
+
+    def __exit__(self, *_):
+        self.wait_for(self.page_has_loaded)
+
+    def wait_for(self, condition_function):
+        import time
+
+        start_time = time.time()
+        while time.time() < start_time + 100:
+            if condition_function():
+                return True
+            else:
+                time.sleep(0.1)
+        raise Exception(
+            'Timeout waiting for {}'.format(condition_function.__name__)
+        )
+
+    def page_has_loaded(self):
+        new_page = self.browser.find_element_by_tag_name('html')
+        return new_page.id != self.old_page.id
