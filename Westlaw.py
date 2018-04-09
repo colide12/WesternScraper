@@ -175,7 +175,6 @@ class WestlawScraper:
     self.logInToSNU()
     time.sleep(2)
     self.MoveToWestLaw()
-    self._driver.get('http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTA%2CCTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad7403700000162a6b3ab2d060783de&tocGuid=I4aee2539c6f64c1812a4c2f3395c2607&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad7403700000162a6b3037a81498199&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)')
     selectSet = ('//*[@id="coid_browseShowCheckboxes"]',           # 0 Specify Content to Search selection box
                  '//*[@id="I57197764642a01705dd361fff15ee4f9"]',   # 1 Selection box A
                  '//*[@id="Idb2f23ddf74a790d1b0699b1c12b6422"]',   # 2 Selection box B
@@ -184,7 +183,7 @@ class WestlawScraper:
                  '//*[@id="I7ea157dafea7a8113db636840c9fb6f6"]',   # 5 Selection box E
                  '//*[@id="I049b6daeada85ffe53b43521991c5817"]',   # 6 Selection box F
                  'jurisdictionIdInner',                  # 7 Select Option  //*[@id="jurisdictionIdInner"]
-                 '//*[@id="co_fed_CTA"]',                          # 8 Selection box Court of Appeals
+                 '//*[@id="co_fed_CTA"]',                          # 8 Selection box Court of Appeals 이거는 빼야겠다. 날짜도 그냥 포함해서 하고, 나중에 걸러 내는 식으로
                  '//*[@id="co_fed_CTAF"]',                         # 9 Selection box Federal Court  
                  '//*[@id="co_jurisdictionSave"]',                 # 10 save 
                  '//*[@id="searchButton"]',                        # 11 search botton 
@@ -212,8 +211,8 @@ class WestlawScraper:
       # end for
    
       self._driver.find_element_by_id(selectSet[7]).click() # click option
-      self._wait_for_element(selectSet[8])
-      for k in range(8,11):
+      self._wait_for_element(selectSet[9])
+      for k in range(9,11):
         self._driver.find_element_by_xpath(selectSet[k]).click() # Select CoA and FC and save
 
       # self._wait_for_element(selectSet[11])
@@ -225,24 +224,24 @@ class WestlawScraper:
       time.sleep(20)
       # self._driver.find_element_by_xpath(selectSet[12]).click()
       # self._driver.find_element_by_xpath(selectSet[13]).click()
-      self._driver.find_element_by_id(selectSet[12]).click()
-      print('12')
-      wait_for_page_load(self._driver)
-      self._driver.find_element_by_id(selectSet[13]).click()
-      print('13')
-      wait_for_page_load(self._driver)
-      time.sleep(5)
-      self._driver.find_element_by_id(selectSet[14]).click()
-      # self._long_wait.until(self.Westlaw_appears(selectSet[15], 0))
-      time.sleep(10)
-      self._driver.find_element_by_id(selectSet[15]).click()
-      wait_for_page_load(self._driver)
-      time.sleep(10)
-      self._driver.find_element_by_link_text(selectSet[16]).click()
-      self._driver.find_element_by_xpath(selectSet[17]).click()
-      self._driver.find_element_by_xpath(selectSet[17]).send_keys('1982.10.01')
-      self._driver.find_element_by_xpath(selectSet[18]).click()
-      self._driver.find_element_by_xpath(selectSet[19]).click()
+      # self._driver.find_element_by_id(selectSet[12]).click()
+      # print('12')
+      # wait_for_page_load(self._driver)
+      # self._driver.find_element_by_id(selectSet[13]).click()
+      # print('13')
+      # wait_for_page_load(self._driver)
+      # time.sleep(5)
+      # self._driver.find_element_by_id(selectSet[14]).click()
+      # # self._long_wait.until(self.Westlaw_appears(selectSet[15], 0))
+      # time.sleep(10)
+      # self._driver.find_element_by_id(selectSet[15]).click()
+      # wait_for_page_load(self._driver)
+      # time.sleep(10)
+      # self._driver.find_element_by_link_text(selectSet[16]).click()
+      # self._driver.find_element_by_xpath(selectSet[17]).click()
+      # self._driver.find_element_by_xpath(selectSet[17]).send_keys('1982.10.01')
+      # self._driver.find_element_by_xpath(selectSet[18]).click()
+      # self._driver.find_element_by_xpath(selectSet[19]).click()
       self._long_wait.until(self.Westlaw_appears(selectSet[20], 0))
       firstDocURL = self._driver.find_element_by_xpath(selectSet[20]).get_attribute('href')
       self._driver.get(firstDocURL)
