@@ -21,15 +21,15 @@ class WestlawScraper:
   """
 	Class for downloading documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
 
-  URLs below searched Westlaw database using the Keynumbers w.r.t. II. PATENTABILITY AND VALIDITY, k421-k850. 
-  Jurisdiction is set to be CAFC, and the date is from Oct. 01. 1982 to Feb. 28. 2018. 
+  URLs below searched Westlaw database using the Keynumbers w.r.t. II. PATENTABILITY AND VALIDITY, k421-k850.
+  Jurisdiction is set to be CAFC, and the date is from Oct. 01. 1982 to Feb. 28. 2018.
 
   The first URL searched subsection A~D(k421~k670), and the second one searched E~F(k671~k850).
 
   URL:
   1) http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad6ad3a000001625941c6eb3d80e251&tocGuid=I2501c862419b7f95f8720560c638baee&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad6ad3a000001625941006af9d8901f&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
   2) http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad6ad3a0000016259442d083d8102b9&tocGuid=I2501c862419b7f95f8720560c638baee&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad6ad3a0000016259434b96f9d8910d&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
- 
+
   Example(Should be changed)::
 
       downloader = WestlawScraper(mass_download_mode=True)
@@ -65,9 +65,9 @@ class WestlawScraper:
     :param float,float wait_timeouts: tuple of `(short, long)` where `short` and `long` are the no. of seconds to wait while page elements are loaded (for Webdriver). `long` timeout is used when waiting for LexisNexis to format documents for mass downloads.
     :param  str  url for Westlaw keynumber search. 2 urls stated above.
     """
-    
+
     self.profile = self.create_browser_profile()
-    self._driver = self.get_driver(self.profile)  
+    self._driver = self.get_driver(self.profile)
     # self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
     # self._driver.set_window_size(800, 600)
     self._short_wait = selenium.webdriver.support.ui.WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
@@ -92,7 +92,7 @@ class WestlawScraper:
     loginButton.click()
     return self._driver
   # end of def
-  
+
   def Westlaw_appears(self, current_handle_or_xpath, isWindow):
         # isWindow = 1: detect whether Westlaw homepage loaded
         #          = 0: detect whether keynumber link loaded, detect whether patent link loaded, detect whether patent-sub link loaded
@@ -121,12 +121,12 @@ class WestlawScraper:
         if isWindow == 1: return f
         else: return g
   # end of def
-        
+
   def MoveToWestLaw(self):
 
     # move to academic DB in SNU library
     self._driver.get('http://library.snu.ac.kr/find/databases')
-    
+
     # move to Westlaw main page
     self._wait_for_element('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[4]/div/div[2]/ul/li[23]')
     wButton = self._driver.find_element_by_xpath('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[4]/div/div[2]/ul/li[23]')
@@ -134,12 +134,12 @@ class WestlawScraper:
     self._wait_for_element('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[5]/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]/div')
     goToWestlaw = self._driver.find_element_by_xpath('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[5]/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]/div')
     goToWestlaw.click()
-    parent_window_handle = self._driver.current_window_handle 
+    parent_window_handle = self._driver.current_window_handle
     self._wait_for_element('/html/body/div[5]/div/form/input[4]')
     confirmWestlaw = self._driver.find_element_by_xpath('/html/body/div[5]/div/form/input[4]')
     confirmWestlaw.click()
-    self._long_wait.until(self.Westlaw_appears(parent_window_handle, 1))  
-  
+    self._long_wait.until(self.Westlaw_appears(parent_window_handle, 1))
+
     # move to keynumber
     self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div[1]/ul/li[2]/a', 0))
     keyNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div[1]/ul/li[2]/a').get_attribute('href')
@@ -154,20 +154,20 @@ class WestlawScraper:
     # self._long_wait.until(Westlaw_appears('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[2]/div[2]/div/a', 0))
     # keyNumber_patent_invalidation = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[2]/div[2]/div/a').get_attribute('href')
     # self._driver.get(keyNumber_patent_invalidation)
-       
+
    # end of def
 
 
   def __del__(self):
     try: self._driver.quit()
     except: pass
- 
+
 
 
   def iter_search_results(self, start_from=1):
     """
     A generator function that executes LexisNexis search query on source data CSI (:attr:`csi`), with query :attr:`search_query` and downloads all documents returned by search.
-    :param str url: 
+    :param str url:
     :param int start_from: document index to start downloading from.
     :returns: a tuple `(doc_content, (index, results_count))`, where `doc_content` is the HTML content of the `index`th document, and `results_count` is the number of documents returned by specified search query.
     """
@@ -184,9 +184,9 @@ class WestlawScraper:
                  '//*[@id="I049b6daeada85ffe53b43521991c5817"]',   # 6 Selection box F
                  'jurisdictionIdInner',                  # 7 Select Option  //*[@id="jurisdictionIdInner"]
                  '//*[@id="co_fed_CTA"]',                          # 8 Selection box Court of Appeals 이거는 빼야겠다. 날짜도 그냥 포함해서 하고, 나중에 걸러 내는 식으로
-                 '//*[@id="co_fed_CTAF"]',                         # 9 Selection box Federal Court  
-                 '//*[@id="co_jurisdictionSave"]',                 # 10 save 
-                 '//*[@id="searchButton"]',                        # 11 search botton 
+                 '//*[@id="co_fed_CTAF"]',                         # 9 Selection box Federal Court
+                 '//*[@id="co_jurisdictionSave"]',                 # 10 save
+                 '//*[@id="searchButton"]',                        # 11 search botton
                  #'//*[@id="jurisdictionTDBabFpHVnlZV3dfRVF8Um1Wa1pYSmhiQV9FUV9FUQ_EQ_EQLink"]' # 12 expand Federal
                  'jurisdictionTDBabFpHVnlZV3dfRVF8Um1Wa1pYSmhiQV9FUV9FUQ_EQ_EQLink',
                  # '//*[@id="jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHp8UTNSekxpQnZaaUJCY0hCbFlXeHo_EQLink"]', # 13 expand Ct. of Appeals
@@ -199,7 +199,7 @@ class WestlawScraper:
                  '//*[@id="co_dateWidgetCustomRangeDoneButton_date_after"]', # 18 confirm the date
                  '//*[@id="co_multifacet_selector_2_applyFacetFilter"]', # 19 apply the filter
                  '//*[@id="cobalt_result_headnote_title1"]'             # 20 first document
-                 ) 
+                 )
     for i in range(2):
       self._wait_for_element(selectSet[0])
       self._driver.find_element_by_xpath(selectSet[0]).click() # Click Specify Content To Search
@@ -209,7 +209,7 @@ class WestlawScraper:
       for j in range(1+(2*i),3+(2*i)):
         self._driver.find_element_by_xpath(selectSet[j]).click() # Select Search boxes from A to B
       # end for
-   
+
       self._driver.find_element_by_id(selectSet[7]).click() # click option
       self._wait_for_element(selectSet[9])
       for k in range(9,11):
@@ -244,8 +244,16 @@ class WestlawScraper:
       # self._driver.find_element_by_xpath(selectSet[19]).click()
       self._long_wait.until(self.Westlaw_appears(selectSet[20], 0))
       firstDocURL = self._driver.find_element_by_xpath(selectSet[20]).get_attribute('href')
-      self._driver.get(firstDocURL)
-      self._sequential_download()
+      html = urllib.request.Request(firstDocURL)
+      data = urllib.request.urlopen(firstDocURL).read()
+      print(data)
+
+      f = open("./response.html", "wb")
+      print('high')
+      f.write(data)
+      f.close
+      # self._driver.get(firstDocURL)
+      # self._sequential_download()
     # end for
 
     # self._driver.get(self.urlWestlaw)
@@ -258,12 +266,12 @@ class WestlawScraper:
   # end def
 
   def _sequential_download(self):
-    
+
     pass
-  # end of def  
-  
+  # end of def
+
   def _safe_wait(self, poll_func):
-    try: return self._short_wait.until(poll_func)
+    try: return self._long_wait.until(poll_func)
     except selenium.common.exceptions.TimeoutException: return None
   # end def
 
