@@ -242,16 +242,18 @@ class WestlawScraper:
       # self._driver.find_element_by_xpath(selectSet[17]).send_keys('1982.10.01')
       # self._driver.find_element_by_xpath(selectSet[18]).click()
       # self._driver.find_element_by_xpath(selectSet[19]).click()
-      self._long_wait.until(self.Westlaw_appears(selectSet[20], 0))
+      self._long_wait.until(self.Westlaw_appears(selectSet[20], 0)) # wait until the first search result appears
       firstDocURL = self._driver.find_element_by_xpath(selectSet[20]).get_attribute('href')
-      html = urllib.request.Request(firstDocURL)
-      data = urllib.request.urlopen(firstDocURL).read()
-      print(data)
-
-      f = open("./response.html", "wb")
-      print('high')
-      f.write(data)
-      f.close
+      self._driver.get(firstDocURL) # open the first result
+      docNumber = 0
+      self._driver.send_keys(u'\ue011')
+      print(self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[5]/div[1]/div/ul[1]/li[2]/div/span/strong[1]'))
+      while docNumber != self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[5]/div[1]/div/ul[1]/li[2]/div/span/strong[1]'):
+        docNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[5]/div[1]/div/ul[1]/li[2]/div/span/strong[1]') # current document number
+        docTitle = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[1]/div/h2/span/a').text # current document name
+        with open("./"+docTitle+".html", "wb") as f:
+          f.write(self._driver.page_source.encode('utf-8')) # download it in html format
+        self.driver.find_element_by_xpath('//*[@id="co_documentFooterResultsNavigationNext"]').click # to the next document
       # self._driver.get(firstDocURL)
       # self._sequential_download()
     # end for
