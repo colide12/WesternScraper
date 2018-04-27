@@ -95,7 +95,7 @@ class WestlawScraper:
 
   def Westlaw_appears(self, current_handle_or_xpath, isWindow):
         # isWindow = 1: detect whether Westlaw homepage loaded
-        #          = 0: detect whether keynumber link loaded, detect whether patent link loaded, detect whether patent-sub link loaded
+        #          = 0: detect whether keynumber link loaded
 
         def f(driver):
           for handle in driver.window_handles:
@@ -110,9 +110,7 @@ class WestlawScraper:
 
         def g(driver):
           if expected_conditions.visibility_of_any_elements_located((selenium.webdriver.common.by.By.XPATH, current_handle_or_xpath)):
-            # keyNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div[1]/ul/li[2]/a').get_attribute('href')
             keyNumber = self._driver.find_element_by_xpath(current_handle_or_xpath).get_attribute('href')
-            print(keyNumber)
             return True
 
           return False
@@ -122,7 +120,7 @@ class WestlawScraper:
         else: return g
   # end of def
 
-  def MoveToWestLaw(self):
+  def MoveToWestLawKeyNumber(self): # 이거 둘로 쪼개야겠다. lib2westlaw + westlaw2westlaw
 
     # move to academic DB in SNU library
     self._driver.get('http://library.snu.ac.kr/find/databases')
@@ -148,8 +146,8 @@ class WestlawScraper:
     # move to keynumber-patent
     self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[3]/ul[3]/li[4]/div/a[1]', 0))
     keyNumber_patent = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[3]/ul[3]/li[4]/div/a[1]').get_attribute('href')
-    self._driver.get(keyNumber_patent)
-
+    # self._driver.get(keyNumber_patent)
+    return keyNumber_patent
     # # move to invalidation cases
     # self._long_wait.until(Westlaw_appears('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[2]/div[2]/div/a', 0))
     # keyNumber_patent_invalidation = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[2]/div[2]/div/a').get_attribute('href')
@@ -174,7 +172,7 @@ class WestlawScraper:
 
     self.logInToSNU()
     time.sleep(2)
-    self.MoveToWestLaw()
+    KeyNumberURL = self.MoveToWestLawKeyNumber()
     selectSet = ('//*[@id="coid_browseShowCheckboxes"]',           # 0 Specify Content to Search selection box
                  '//*[@id="I57197764642a01705dd361fff15ee4f9"]',   # 1 Selection box A
                  '//*[@id="Idb2f23ddf74a790d1b0699b1c12b6422"]',   # 2 Selection box B
@@ -182,95 +180,76 @@ class WestlawScraper:
                  '//*[@id="Id841cb612743d076ea11140558a11feb"]',   # 4 Selection box D
                  '//*[@id="I7ea157dafea7a8113db636840c9fb6f6"]',   # 5 Selection box E
                  '//*[@id="I049b6daeada85ffe53b43521991c5817"]',   # 6 Selection box F
-                 'jurisdictionIdInner',                  # 7 Select Option  //*[@id="jurisdictionIdInner"]
+                 'jurisdictionIdInner',                            # 7 Select Option  //*[@id="jurisdictionIdInner"]
                  '//*[@id="co_fed_CTA"]',                          # 8 Selection box Court of Appeals 이거는 빼야겠다. 날짜도 그냥 포함해서 하고, 나중에 걸러 내는 식으로
                  '//*[@id="co_fed_CTAF"]',                         # 9 Selection box Federal Court
                  '//*[@id="co_jurisdictionSave"]',                 # 10 save
                  '//*[@id="searchButton"]',                        # 11 search botton
-                 #'//*[@id="jurisdictionTDBabFpHVnlZV3dfRVF8Um1Wa1pYSmhiQV9FUV9FUQ_EQ_EQLink"]' # 12 expand Federal
-                 'jurisdictionTDBabFpHVnlZV3dfRVF8Um1Wa1pYSmhiQV9FUV9FUQ_EQ_EQLink',
-                 # '//*[@id="jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHp8UTNSekxpQnZaaUJCY0hCbFlXeHo_EQLink"]', # 13 expand Ct. of Appeals
-                 'jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHp8UTNSekxpQnZaaUJCY0hCbFlXeHo_EQLink',
-                 # '//*[@id="facet_hierarchy_jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHp8UTNSekxpQnZaaUJCY0hCbFlXeHo_EQ"]', # 14 select FC
-                 'facet_hierarchy_jurisdictionTDBabFpHVnlZV3d2UTNSekxpQnZaaUJCY0hCbFlXeHpMMFpsWkdWeVlXd2dRMmx5TGdfRVFfRVF8Um1Wa1pYSmhiQ0JEYVhJdQ_EQ_EQ',
-                 'co_dateWidget_date_dropdown_span',    # 15 date setting
-                 'All Dates After', # 16 click to set date after a certain day
-                 '//*[@id="co_dateWidgetCustomRangeText_date_after"]', # 17 put in the 'certain' day
-                 '//*[@id="co_dateWidgetCustomRangeDoneButton_date_after"]', # 18 confirm the date
-                 '//*[@id="co_multifacet_selector_2_applyFacetFilter"]', # 19 apply the filter
-                 '//*[@id="cobalt_result_headnote_title1"]'             # 20 first document
+                 '//*[@id="cobalt_result_headnote_title1"]'        # 12 first document
                  )
-    for i in range(2):
+    for i in range(3):
+      print('i is '+str(i))
+      self._driver.get(KeyNumberURL)
       self._wait_for_element(selectSet[0])
-      self._driver.find_element_by_xpath(selectSet[0]).click() # Click Specify Content To Search
+      specifyContentTOSearch = self._driver.find_element_by_xpath(selectSet[0])
+      if not specifyContentTOSearch.is_selected():
+        self._driver.find_element_by_xpath(selectSet[0]).click() # Click Specify Content To Search
 
-      # self._wait_for_element(selectSet[1])
       time.sleep(0.5)
+      self._driver.execute_script('window.scrollBy(0,250)', '')
       for j in range(1+(2*i),3+(2*i)):
         self._driver.find_element_by_xpath(selectSet[j]).click() # Select Search boxes from A to B
       # end for
-
-      self._driver.find_element_by_id(selectSet[7]).click() # click option
-      self._wait_for_element(selectSet[9])
-      for k in range(9,11):
-        self._driver.find_element_by_xpath(selectSet[k]).click() # Select CoA and FC and save
-
-      # self._wait_for_element(selectSet[11])
+      if not i: # for CDEF, skip setting jurisdiction
+        self._driver.find_element_by_id(selectSet[7]).click() # click option
+        self._wait_for_element(selectSet[9])
+        for k in range(9,11):
+          self._driver.find_element_by_xpath(selectSet[k]).click() # Select CoA and FC and save
       time.sleep(0.5)
-      self._driver.find_element_by_xpath(selectSet[11]).click()
+      self._short_wait.until_not(
+        expected_conditions.element_to_be_clickable((selenium.webdriver.common.by.By.XPATH, selectSet[10]))
+        )
 
-      # put in several search options
-      # self._long_wait.until(self.Westlaw_appears(selectSet[16], 0))
-      time.sleep(20)
-      # self._driver.find_element_by_xpath(selectSet[12]).click()
-      # self._driver.find_element_by_xpath(selectSet[13]).click()
-      # self._driver.find_element_by_id(selectSet[12]).click()
-      # print('12')
-      # wait_for_page_load(self._driver)
-      # self._driver.find_element_by_id(selectSet[13]).click()
-      # print('13')
-      # wait_for_page_load(self._driver)
-      # time.sleep(5)
-      # self._driver.find_element_by_id(selectSet[14]).click()
-      # # self._long_wait.until(self.Westlaw_appears(selectSet[15], 0))
-      # time.sleep(10)
-      # self._driver.find_element_by_id(selectSet[15]).click()
-      # wait_for_page_load(self._driver)
-      # time.sleep(10)
-      # self._driver.find_element_by_link_text(selectSet[16]).click()
-      # self._driver.find_element_by_xpath(selectSet[17]).click()
-      # self._driver.find_element_by_xpath(selectSet[17]).send_keys('1982.10.01')
-      # self._driver.find_element_by_xpath(selectSet[18]).click()
-      # self._driver.find_element_by_xpath(selectSet[19]).click()
-      self._long_wait.until(self.Westlaw_appears(selectSet[20], 0)) # wait until the first search result appears
-      firstDocURL = self._driver.find_element_by_xpath(selectSet[20]).get_attribute('href')
+      with wait_for_page_load(self._driver) as pl:
+        self._driver.find_element_by_xpath(selectSet[11]).click()
+      
+      self._long_wait.until(self.Westlaw_appears(selectSet[12], 0)) # wait until the first search result appears
+      p = re.compile('\(|\)|\,')
+      totalDocNumber = int(p.sub('', self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div[5]/div[1]/h1/span').text)) # total document number
+      firstDocURL = self._driver.find_element_by_xpath(selectSet[12]).get_attribute('href')
       self._driver.get(firstDocURL) # open the first result
-      docNumber = 0
-      self._driver.send_keys(u'\ue011')
-      print(self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[5]/div[1]/div/ul[1]/li[2]/div/span/strong[1]'))
-      while docNumber != self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[5]/div[1]/div/ul[1]/li[2]/div/span/strong[1]'):
-        docNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[5]/div[1]/div/ul[1]/li[2]/div/span/strong[1]') # current document number
-        docTitle = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[1]/div/h2/span/a').text # current document name
-        with open("./"+docTitle+".html", "wb") as f:
-          f.write(self._driver.page_source.encode('utf-8')) # download it in html format
-        self.driver.find_element_by_xpath('//*[@id="co_documentFooterResultsNavigationNext"]').click # to the next document
-      # self._driver.get(firstDocURL)
-      # self._sequential_download()
+      
+      for k in range(totalDocNumber):
+        print('k is '+str(k))
+        self._driver.execute_script('window.scrollTo(0,0);') # scroll to top left corner
+        nextDocButtonXpath = '//*[@id="co_documentFooterResultsNavigationNext"]'
+        self._wait_for_element(nextDocButtonXpath)
+        if self._driver.find_element_by_xpath('//*[@id="courtline"]').text == 'United States Court of Appeals, Federal Circuit.':
+          q1 = re.compile("[0-9]{4}") # get **** (**** can be any number) 
+          q2 = re.compile("[a-zA-Z]*")      # get month name
+          m1 = q1.search(self._driver.find_element_by_xpath('//*[@id="filedate"]').text)
+          m2 = q2.search(self._driver.find_element_by_xpath('//*[@id="filedate"]').text)
+          
+          if (int(m1.group()) > 1982)|((m1.group() == 1982) & (m2.group() in ('October', 'November', 'December'))):
+            docTitle = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[1]/div/h2/span/a').text # current document name
+            if i == 0:
+              with open("./WestlawHTMLAB/"+docTitle+".html", "wb") as f:
+                f.write(self._driver.page_source.encode('utf-8')) # download it in html format
+            elif i == 1:
+              with open("./WestlawHTMLCD/"+docTitle+".html", "wb") as f:
+                f.write(self._driver.page_source.encode('utf-8')) # download it in html format
+            else:
+              with open("./WestlawHTMLEF/"+docTitle+".html", "wb") as f:
+                f.write(self._driver.page_source.encode('utf-8')) # download it in html format
+            # end if
+          # end if   
+        # end if
+      # end for  
+        with wait_for_page_load(self._driver) as pl:
+          self._driver.find_element_by_xpath(nextDocButtonXpath).click()
+          pl
     # end for
-
-    # self._driver.get(self.urlWestlaw)
-    time.sleep(100)
-    # selenium.webdriver.common.action_chains.ActionChains(self._driver).send_keys('jjy911018').send_keys(u'\ue004').send_keys('?').send_keys(u'\ue006') # 로그인을 위한 코드인데 수정이 필요할 듯. 따로 pyㅠ파일을 만들 생각
-
-    # if not self._have_results(): return []
-
-    # self._sequential_download(start_from)
   # end def
-
-  def _sequential_download(self):
-
-    pass
-  # end of def
 
   def _safe_wait(self, poll_func):
     try: return self._long_wait.until(poll_func)
@@ -278,7 +257,7 @@ class WestlawScraper:
   # end def
 
   def _wait_for_element(self, xpath, raise_error=True):
-    elem = self._safe_wait(expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.XPATH, xpath)))
+    elem = self._safe_wait(expected_conditions.visibility_of_any_elements_located((selenium.webdriver.common.by.By.XPATH, xpath)))
     if raise_error and elem is None: raise selenium.common.exceptions.TimeoutException(msg='XPath \'{}\' presence wait timeout.'.format(xpath))
     return elem
 
@@ -301,17 +280,8 @@ class WestlawScraper:
     profile.set_preference('services.sync.prefs.sync.browser.download.manager.showWhenStarting', False)
     profile.set_preference('pdfjs.disabled', True)
     profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/pdf')
+
     return profile
-
-# log in to the library
-
-# go to Westlaw website
-
-# move to the keynumber search results
-
-# do sequential download(click the first doc, and download html, and then click next doc.)
-
-
 
 
 class wait_for_page_load(object):
@@ -320,7 +290,8 @@ class wait_for_page_load(object):
         self.browser = browser
 
     def __enter__(self):
-        self.old_page = self.browser.find_element_by_tag_name('html')
+      print('old_page')
+      self.old_page = self.browser.find_element_by_tag_name('html')
 
     def __exit__(self, *_):
         self.wait_for(self.page_has_loaded)
@@ -339,5 +310,6 @@ class wait_for_page_load(object):
         )
 
     def page_has_loaded(self):
-        new_page = self.browser.find_element_by_tag_name('html')
-        return new_page.id != self.old_page.id
+      print('new_page')
+      new_page = self.browser.find_element_by_tag_name('html')
+      return new_page.id != self.old_page.id
