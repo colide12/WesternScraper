@@ -12,23 +12,14 @@ import selenium.webdriver.common.action_chains
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
 import selenium.webdriver.common.desired_capabilities
-import selenium.webdriver.support.ui
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.common.by import By
 
-from logIn import logInToSNU
 
 class WestlawScraper:
   """
 	Class for downloading documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
-
-  URLs below searched Westlaw database using the Keynumbers w.r.t. II. PATENTABILITY AND VALIDITY, k421-k850.
-  Jurisdiction is set to be CAFC, and the date is from Oct. 01. 1982 to Feb. 28. 2018.
-
-  The first URL searched subsection A~D(k421~k670), and the second one searched E~F(k671~k850).
-
-  URL:
-  1) http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad6ad3a000001625941c6eb3d80e251&tocGuid=I2501c862419b7f95f8720560c638baee&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad6ad3a000001625941006af9d8901f&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
-  2) http://lps3.1.next.westlaw.com.libproxy.snu.ac.kr/Search/Results.html?jurisdiction=CTAF&contentType=CUSTOMDIGEST&querySubmissionGuid=i0ad6ad3a0000016259442d083d8102b9&tocGuid=I2501c862419b7f95f8720560c638baee&categoryPageUrl=Home%2FWestKeyNumberSystem&searchId=i0ad6ad3a0000016259434b96f9d8910d&collectionSet=w_cs_cd_toc&transitionType=ListViewType&contextData=(sc.CustomDigest)
 
   Example(Should be changed)::
 
@@ -51,27 +42,21 @@ class WestlawScraper:
   editor_abbreviation = None
   author_abbreviation = None
 
-  _RE_STYLESHEET = re.compile(r'\<STYLE TYPE\=\"text\/css\"\>(\<\!\-\-)?(?P<css_string>.+?)(\-\-\>)?\<\/STYLE\>', flags=re.S | re.U | re.I)
-  _RE_LEXIS_DOC = re.compile(r'\<DOC NUMBER\=(?P<docid>\d+)\>\s+\<DOCFULL\>(?P<doc>.+?)\<\/DOCFULL\>', flags=re.S | re.U | re.I)
-
-# re.compile(ur ~~~) is the original form. Jay Jung changed it to re.compile(r ~~~)
-# _RE_STYLESHEET = re.compile(ur'\<STYLE TYPE\=\"text\/css\"\>(\<\!\-\-)?(?P<css_string>.+?)(\-\-\>)?\<\/STYLE\>', flags=re.S | re.U | re.I)
-#  _RE_LEXIS_DOC = re.compile(ur'\<DOC NUMBER\=(?P<docid>\d+)\>\s+\<DOCFULL\>(?P<doc>.+?)\<\/DOCFULL\>', flags=re.S | re.U | re.I)
-
   def __init__(self, urlWestlaw, wait_timeouts=(15, 1800)):
     """
     Constructs a downloader object.
 
-    :param float,float wait_timeouts: tuple of `(short, long)` where `short` and `long` are the no. of seconds to wait while page elements are loaded (for Webdriver). `long` timeout is used when waiting for LexisNexis to format documents for mass downloads.
     :param  str  url for Westlaw keynumber search. 2 urls stated above.
+    :param float,float wait_timeouts: tuple of `(short, long)` where `short` and `long` are the no. of seconds to wait while page elements are loaded (for Webdriver). `long` timeout is used when waiting for LexisNexis to format documents for mass downloads.
+
     """
 
     self.profile = self.create_browser_profile()
     self._driver = self.get_driver(self.profile)
     # self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
     # self._driver.set_window_size(800, 600)
-    self._short_wait = selenium.webdriver.support.ui.WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
-    self._long_wait = selenium.webdriver.support.ui.WebDriverWait(self._driver, wait_timeouts[1], poll_frequency=1)
+    self._short_wait = WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
+    self._long_wait = WebDriverWait(self._driver, wait_timeouts[1], poll_frequency=1)
 
     self.urlWestlaw = urlWestlaw
   # end def
@@ -94,30 +79,27 @@ class WestlawScraper:
   # end of def
 
   def Westlaw_appears(self, current_handle_or_xpath, isWindow):
-        # isWindow = 1: detect whether Westlaw homepage loaded
+        # isWindow = 1: detect whether Wes tlaw homepage loaded
         #          = 0: detect whether keynumber link loaded
+    def f(driver): # self._driver(blur~)라서 앞의 _driver에서 가져 오는 듯
+      for handle in driver.window_handles:
+        if current_handle_or_xpath != handle:
+          driver.switch_to.window(handle)  # switch first to check window title
+          if driver.title.endswith('Westlaw'): return True  # this is our new window!/JY:check if the title ends with 'Download Documents'
+        #end if
+      #end for
+      return False # JY: as Westlaw_appears is an input for wait_for, False will make python wait.
+    #end def
 
-        def f(driver):
-          for handle in driver.window_handles:
-            if current_handle_or_xpath != handle:
-              driver.switch_to.window(handle)  # switch first to check window title
-              if driver.title.endswith('Westlaw'): return True  # this is our new window!/JY:check if the title ends with 'Download Documents'
-            #end if
-          #end for
+    def g(driver): # 사실 이게 wait_for나 page_loaded랑 같은 건데
+      if expected_conditions.visibility_of_any_elements_located((selenium.webdriver.common.by.By.XPATH, current_handle_or_xpath)):
+        keyNumber = driver.find_element_by_xpath(current_handle_or_xpath).get_attribute('href')
+        return True
+      return False
+    # end of def
 
-          return False # JY: this probably means an error
-        #end def
-
-        def g(driver):
-          if expected_conditions.visibility_of_any_elements_located((selenium.webdriver.common.by.By.XPATH, current_handle_or_xpath)):
-            keyNumber = self._driver.find_element_by_xpath(current_handle_or_xpath).get_attribute('href')
-            return True
-
-          return False
-        # end of def
-
-        if isWindow == 1: return f
-        else: return g
+    if isWindow == 1: return f
+    else: return g
   # end of def
 
   def MoveToWestLawKeyNumber(self): # 이거 둘로 쪼개야겠다. lib2westlaw + westlaw2westlaw
@@ -155,12 +137,9 @@ class WestlawScraper:
 
    # end of def
 
-
   def __del__(self):
     try: self._driver.quit()
     except: pass
-
-
 
   def iter_search_results(self, start_from=1):
     """
@@ -169,10 +148,9 @@ class WestlawScraper:
     :param int start_from: document index to start downloading from.
     :returns: a tuple `(doc_content, (index, results_count))`, where `doc_content` is the HTML content of the `index`th document, and `results_count` is the number of documents returned by specified search query.
     """
-
     self.logInToSNU()
-    time.sleep(2)
-    KeyNumberURL = self.MoveToWestLawKeyNumber()
+    with wait_for_page_load(self._driver) as pl:
+      KeyNumberURL = self.MoveToWestLawKeyNumber()
     selectSet = ('//*[@id="coid_browseShowCheckboxes"]',           # 0 Specify Content to Search selection box
                  '//*[@id="I57197764642a01705dd361fff15ee4f9"]',   # 1 Selection box A
                  '//*[@id="Idb2f23ddf74a790d1b0699b1c12b6422"]',   # 2 Selection box B
@@ -185,7 +163,11 @@ class WestlawScraper:
                  '//*[@id="co_fed_CTAF"]',                         # 9 Selection box Federal Court
                  '//*[@id="co_jurisdictionSave"]',                 # 10 save
                  '//*[@id="searchButton"]',                        # 11 search botton
-                 '//*[@id="cobalt_result_headnote_title1"]'        # 12 first document
+                 '//*[@id="co_dateWidget_date_dropdown_span"]',     # 12 date
+                 '/html/body/div[1]/div/div[2]/div[3]/div[3]/div/div/div[1]/div[1]/div[2]/div[5]/div/div[3]/div/div/ul[2]/li[2]/a',   # 13 all dates after
+                 '//*[@id="co_dateWidgetCustomRangeText_date_after"]' ,       # 14 date input
+                 '//*[@id="co_dateWidgetCustomRangeDoneButton_date_before"]' , # 15 go button
+                 '//*[@id="cobalt_result_headnote_title1"]'        # 16 first document
                  )
     for i in range(3):
       print('i is '+str(i))
@@ -211,12 +193,30 @@ class WestlawScraper:
         )
 
       with wait_for_page_load(self._driver) as pl:
-        self._driver.find_element_by_xpath(selectSet[11]).click()
+        self._driver.find_element_by_xpath(selectSet[11]).click() #click search button and wait for the results to appear
 
-      self._long_wait.until(self.Westlaw_appears(selectSet[12], 0)) # wait until the first search result appears
+      with wait_for_page_load(self._driver) as pl:
+        self._long_wait.until(self.Westlaw_appears(selectSet[12], 0)) # wait for date to appear
+        self._driver.execute_script('window.scrollBy(0,250)', '')
+        self._driver.find_element_by_id("co_dateWidget_date_dropdown_span").click()
+        self._driver.find_element_by_link_text("All Dates After").click()
+        self._driver.find_element_by_id("co_dateWidgetCustomRangeText_date_after").clear()
+        self._driver.find_element_by_id("co_dateWidgetCustomRangeText_date_after").send_keys("1982.10.01")
+        self._driver.find_element_by_id("co_dateWidgetCustomRangeDoneButton_date_after").click()
+
+      # self._driver.find_element_by_xpath(selectSet[12]).click() # going to set search date
+      # dataInputPossible = expected_conditions.visibility_of_any_elements_located((selenium.webdriver.common.by.By.XPATH, selectSet[14]))
+      # if not dataInputPossible:
+      #   self._driver.find_element_by_xpath(selectSet[13]).click()
+      # self._long_wait.until(dataInputPossible)
+      # self._driver.find_element_by_xpath(selectSet[14]).send_keys('1982.10.01')
+      # with wait_for_page_load(self._driver) as pl:
+      #   self._driver.find_element_by_xpath(selectSet[15]).click
+
+      self._long_wait.until(self.Westlaw_appears(selectSet[16], 0)) # wait until the first search result appears
       p = re.compile('\(|\)|\,')
       totalDocNumber = int(p.sub('', self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div[5]/div[1]/h1/span').text)) # total document number
-      firstDocURL = self._driver.find_element_by_xpath(selectSet[12]).get_attribute('href')
+      firstDocURL = self._driver.find_element_by_xpath(selectSet[16]).get_attribute('href')
       self._driver.get(firstDocURL) # open the first result
 
       for k in range(totalDocNumber):
@@ -311,5 +311,9 @@ class wait_for_page_load(object):
         )
 
     def page_has_loaded(self):
-      new_page = self.browser.find_element_by_tag_name('html')
-      return new_page.id != self.old_page.id
+      try:
+        new_page = self.browser.find_element_by_tag_name('html')
+        return new_page.id != self.old_page.id
+      except:
+        print('No html dected yet')
+        return False
