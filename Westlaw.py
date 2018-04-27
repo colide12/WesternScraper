@@ -212,28 +212,30 @@ class WestlawScraper:
 
       with wait_for_page_load(self._driver) as pl:
         self._driver.find_element_by_xpath(selectSet[11]).click()
-      
+
       self._long_wait.until(self.Westlaw_appears(selectSet[12], 0)) # wait until the first search result appears
       p = re.compile('\(|\)|\,')
       totalDocNumber = int(p.sub('', self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div[5]/div[1]/h1/span').text)) # total document number
       firstDocURL = self._driver.find_element_by_xpath(selectSet[12]).get_attribute('href')
       self._driver.get(firstDocURL) # open the first result
-      
+
       for k in range(totalDocNumber):
         print('k is '+str(k))
         self._driver.execute_script('window.scrollTo(0,0);') # scroll to top left corner
         nextDocButtonXpath = '//*[@id="co_documentFooterResultsNavigationNext"]'
         self._wait_for_element(nextDocButtonXpath)
         if self._driver.find_element_by_xpath('//*[@id="courtline"]').text == 'United States Court of Appeals, Federal Circuit.':
-          q1 = re.compile("[0-9]{4}") # get **** (**** can be any number) 
+          q1 = re.compile("[0-9]{4}") # get **** (**** can be any number)
           q2 = re.compile("[a-zA-Z]*")      # get month name
           m1 = q1.search(self._driver.find_element_by_xpath('//*[@id="filedate"]').text)
           m2 = q2.search(self._driver.find_element_by_xpath('//*[@id="filedate"]').text)
-          
+
           if (int(m1.group()) > 1982)|((m1.group() == 1982) & (m2.group() in ('October', 'November', 'December'))):
             docTitle = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[1]/div/h2/span/a').text # current document name
+            citation = self._driver.find_element_by_xpath('//*[@id="cite0"]').text # current docket number
+            print(docTitle)
             if i == 0:
-              with open("./WestlawHTMLAB/"+docTitle+".html", "wb") as f:
+              with open("./WestlawHTMLAB/"+citation+".html", "wb") as f:
                 f.write(self._driver.page_source.encode('utf-8')) # download it in html format
             elif i == 1:
               with open("./WestlawHTMLCD/"+docTitle+".html", "wb") as f:
@@ -242,9 +244,9 @@ class WestlawScraper:
               with open("./WestlawHTMLEF/"+docTitle+".html", "wb") as f:
                 f.write(self._driver.page_source.encode('utf-8')) # download it in html format
             # end if
-          # end if   
+          # end if
         # end if
-      # end for  
+      # end for
         with wait_for_page_load(self._driver) as pl:
           self._driver.find_element_by_xpath(nextDocButtonXpath).click()
           pl
@@ -290,7 +292,6 @@ class wait_for_page_load(object):
         self.browser = browser
 
     def __enter__(self):
-      print('old_page')
       self.old_page = self.browser.find_element_by_tag_name('html')
 
     def __exit__(self, *_):
@@ -310,6 +311,5 @@ class wait_for_page_load(object):
         )
 
     def page_has_loaded(self):
-      print('new_page')
       new_page = self.browser.find_element_by_tag_name('html')
       return new_page.id != self.old_page.id
