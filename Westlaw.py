@@ -42,7 +42,7 @@ class WestlawScraper:
   editor_abbreviation = None
   author_abbreviation = None
 
-  def __init__(self, urlWestlaw, wait_timeouts=(15, 1800)):
+  def __init__(self, wait_timeouts=(15, 1800)):
     """
     Constructs a downloader object.
 
@@ -57,8 +57,7 @@ class WestlawScraper:
     # self._driver.set_window_size(800, 600)
     self._short_wait = WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
     self._long_wait = WebDriverWait(self._driver, wait_timeouts[1], poll_frequency=1)
-
-    self.urlWestlaw = urlWestlaw
+    self.ResultsSet = set()
   # end def
 
   def logInToSNU(self):
@@ -149,6 +148,7 @@ class WestlawScraper:
     :returns: a tuple `(doc_content, (index, results_count))`, where `doc_content` is the HTML content of the `index`th document, and `results_count` is the number of documents returned by specified search query.
     """
     self.logInToSNU()
+    time.sleep(0.5)
     with wait_for_page_load(self._driver) as pl:
       KeyNumberURL = self.MoveToWestLawKeyNumber()
     selectSet = ('//*[@id="coid_browseShowCheckboxes"]',           # 0 Specify Content to Search selection box
@@ -204,15 +204,6 @@ class WestlawScraper:
         self._driver.find_element_by_id("co_dateWidgetCustomRangeText_date_after").send_keys("1982.10.01")
         self._driver.find_element_by_id("co_dateWidgetCustomRangeDoneButton_date_after").click()
 
-      # self._driver.find_element_by_xpath(selectSet[12]).click() # going to set search date
-      # dataInputPossible = expected_conditions.visibility_of_any_elements_located((selenium.webdriver.common.by.By.XPATH, selectSet[14]))
-      # if not dataInputPossible:
-      #   self._driver.find_element_by_xpath(selectSet[13]).click()
-      # self._long_wait.until(dataInputPossible)
-      # self._driver.find_element_by_xpath(selectSet[14]).send_keys('1982.10.01')
-      # with wait_for_page_load(self._driver) as pl:
-      #   self._driver.find_element_by_xpath(selectSet[15]).click
-
       self._long_wait.until(self.Westlaw_appears(selectSet[16], 0)) # wait until the first search result appears
       p = re.compile('\(|\)|\,')
       totalDocNumber = int(p.sub('', self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div[5]/div[1]/h1/span').text)) # total document number
@@ -232,16 +223,25 @@ class WestlawScraper:
 
           if (int(m1.group()) > 1982)|((m1.group() == 1982) & (m2.group() in ('October', 'November', 'December'))):
             docTitle = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[1]/div/h2/span/a').text # current document name
-            citation = self._driver.find_element_by_xpath('//*[@id="cite0"]').text # current docket number
+            citationCode = self._driver.find_element_by_xpath('//*[@id="cite0"]').text # current citation code
             print(docTitle)
+            self._driver.execute_script('window.scrollTo(0,0);')
+            self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span',0))
+            docketNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span').text
+            plaintiffNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[1]').text
+            plaintiffName = plaintiffNameOR[:len(plaintiffNameOR)-len(', Plaintiff–Appellee,')]
+            defendantNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[3]').text
+            defendantName = defendantNameOR[:len(defendantNameOR) - len(', Defendant–Appellant.')]
+            self.tmp = ((i, k), docTitle, citationCode, docketNumber, plaintiffName, defendantName)
+            self.ResultsSet.add(self.tmp)
             if i == 0:
-              with open("./WestlawHTMLAB/"+citation+".html", "wb") as f:
+              with open("./WestlawHTMLAB/"+citationCode+".html", "wb") as f:
                 f.write(self._driver.page_source.encode('utf-8')) # download it in html format
             elif i == 1:
-              with open("./WestlawHTMLCD/"+docTitle+".html", "wb") as f:
+              with open("./WestlawHTMLCD/"+citationCode+".html", "wb") as f:
                 f.write(self._driver.page_source.encode('utf-8')) # download it in html format
             else:
-              with open("./WestlawHTMLEF/"+docTitle+".html", "wb") as f:
+              with open("./WestlawHTMLEF/"+citationCode+".html", "wb") as f:
                 f.write(self._driver.page_source.encode('utf-8')) # download it in html format
             # end if
           # end if
