@@ -16,6 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 
+from bs4 import BeautifulSoup
 
 class WestlawScraper:
   """
@@ -73,7 +74,7 @@ class WestlawScraper:
     # PW.send_keys(input("Your PW: "))
     PW.send_keys('%3gkrsus3qksM')
     loginButton = self._driver.find_element_by_css_selector("#edit-actions--2 > input:nth-child(1)")
-    loginButton.click()
+    loginButton.submit()
     return self._driver
   # end of def
 
@@ -226,12 +227,16 @@ class WestlawScraper:
             citationCode = self._driver.find_element_by_xpath('//*[@id="cite0"]').text # current citation code
             print(docTitle)
             self._driver.execute_script('window.scrollTo(0,0);')
-            self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span',0))
-            docketNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span').text
-            plaintiffNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[1]').text
+            # self._wait_for_element('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span')
+            docketNumber = self._driver.find_element_by_xpath('//div[@class="co_contentBlock co_briefItState co_docketBlock"]/span').text
+            plaintiffDefendant = self._driver.find_element_by_xpath('//div[@class="co_suit"]').text
+            print(plaintiffDefendant)
+            plaintiffNameOR = plaintiffDefendant[0]
             plaintiffName = plaintiffNameOR[:len(plaintiffNameOR)-len(', Plaintiff–Appellee,')]
-            defendantNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[3]').text
+            print(plaintiffName)
+            defendantNameOR = plaintiffDefendant[1]
             defendantName = defendantNameOR[:len(defendantNameOR) - len(', Defendant–Appellant.')]
+            print(defendantName)
             self.tmp = ((i, k), docTitle, citationCode, docketNumber, plaintiffName, defendantName)
             self.ResultsSet.add(self.tmp)
             if i == 0:
