@@ -53,7 +53,6 @@ class WestlawScraper:
 
     self.profile = self.create_browser_profile()
     self._driver = self.get_driver(self.profile)
-    self._driver.set_window_size(1920,1080)
     # self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
     # self._driver.set_window_size(800, 600)
     self._short_wait = WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
