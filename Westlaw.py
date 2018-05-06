@@ -53,6 +53,7 @@ class WestlawScraper:
 
     self.profile = self.create_browser_profile()
     self._driver = self.get_driver(self.profile)
+    self._driver.set_window_size(1920,1080)
     # self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
     # self._driver.set_window_size(800, 600)
     self._short_wait = WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
@@ -226,14 +227,14 @@ class WestlawScraper:
             citationCode = self._driver.find_element_by_xpath('//*[@id="cite0"]').text # current citation code
             print(docTitle)
             self._driver.execute_script('window.scrollTo(0,0);')
-            self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span',0))
-            docketNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span').text
-            plaintiffNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[1]').text
-            plaintiffName = plaintiffNameOR[:len(plaintiffNameOR)-len(', Plaintiff–Appellee,')]
-            defendantNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[3]').text
-            defendantName = defendantNameOR[:len(defendantNameOR) - len(', Defendant–Appellant.')]
-            self.tmp = ((i, k), docTitle, citationCode, docketNumber, plaintiffName, defendantName)
-            self.ResultsSet.add(self.tmp)
+            # self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span',0))
+            # docketNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span').text
+            # plaintiffNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[1]').text
+            # plaintiffName = plaintiffNameOR[:len(plaintiffNameOR)-len(', Plaintiff–Appellee,')]
+            # defendantNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[3]').text
+            # defendantName = defendantNameOR[:len(defendantNameOR) - len(', Defendant–Appellant.')]
+            # self.tmp = ((i, k), docTitle, citationCode, docketNumber, plaintiffName, defendantName)
+            # self.ResultsSet.add(self.tmp)
             if i == 0:
               with open("./WestlawHTMLAB/"+citationCode+".html", "wb") as f:
                 f.write(self._driver.page_source.encode('utf-8')) # download it in html format
