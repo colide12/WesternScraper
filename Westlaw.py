@@ -17,9 +17,9 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 
 
-class WestlawScraper:
+class WestlawURLScraper:
   """
-	Class for downloading documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
+  Class for downloading URLs of documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
 
   Example(Should be changed)::
 
@@ -61,11 +61,10 @@ class WestlawScraper:
   # end def
 
   def logInToSNU(self):
-    # self._driver = selenium.webdriver.Firefox(executable_path = 'C:\Python\Mymodules\PythonCrawler\geckodriver')
     self._driver.get('https://lib.snu.ac.kr')
     startLogin = self._driver.find_element_by_css_selector("#top-user-menu-additional > div:nth-child(2) > a:nth-child(1)")
     startLogin.click()
-    time.sleep(1) # expected_conditions 코드를 사용하면 좀 더 최적화 가능, 그런데 왜인지 모르겠지만 is not reachable by keyboard
+    time.sleep(1)
     ID = self._driver.find_element_by_css_selector("#edit-si-id")
     # ID.send_keys(input("Your ID: "))
     ID.send_keys('jjy911018')
@@ -107,15 +106,22 @@ class WestlawScraper:
     self._driver.get('http://library.snu.ac.kr/find/databases')
 
     # move to Westlaw main page
-    self._wait_for_element('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[4]/div/div[2]/ul/li[23]')
-    wButton = self._driver.find_element_by_xpath('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[4]/div/div[2]/ul/li[23]')
+
+    SNUXPaths = (
+        '/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[4]/div/div[2]/ul/li[23]',  # W Button
+        '/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[5]/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]/div',  # Westlaw link
+        '/html/body/div[5]/div/form/input[4]'  # Confirm direct to Westlaw
+        )
+
+    self._wait_for_element(SNUXPaths[0])
+    wButton = self._driver.find_element_by_xpath(SNUXPaths[0])
     wButton.click()
-    self._wait_for_element('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[5]/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]/div')
-    goToWestlaw = self._driver.find_element_by_xpath('/html/body/div[2]/div/div/main/div/div[2]/div/div/div/div/div/div/div[5]/div/div/div/div/div[2]/table/tbody/tr[2]/td[1]/div')
-    goToWestlaw.click()
+    self._wait_for_element(SNUXPaths[1])
+    WestlawLink = self._driver.find_element_by_xpath(SNUXPaths[1])
+    WestlawLink.click()
     parent_window_handle = self._driver.current_window_handle
-    self._wait_for_element('/html/body/div[5]/div/form/input[4]')
-    confirmWestlaw = self._driver.find_element_by_xpath('/html/body/div[5]/div/form/input[4]')
+    self._wait_for_element(SNUXPaths[2])
+    confirmWestlaw = self._driver.find_element_by_xpath(SNUXPaths[2])
     confirmWestlaw.click()
     self._long_wait.until(self.Westlaw_appears(parent_window_handle, 1))
 
