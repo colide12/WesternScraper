@@ -17,6 +17,7 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
 
 import csv
+import pprint
 
 class WestlawURLScraper:
   """
@@ -58,7 +59,7 @@ class WestlawURLScraper:
     # self._driver.set_window_size(800, 600)
     self._short_wait = WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
     self._long_wait = WebDriverWait(self._driver, wait_timeouts[1], poll_frequency=1)
-    self.ResultsSet = set()
+
   # end def
 
   def logInToSNU(self):
@@ -146,18 +147,13 @@ class WestlawURLScraper:
     try: self._driver.quit()
     except: pass
 
-  def iter_search_results(self, isABCDEF, , KeyNumberURL, start_from=1):
+  def iter_search_results(self, isABCDEF, KeyNumberURL, start_from=1):
     """
-    A generator function that executes LexisNexis search query on source data CSI (:attr:`csi`), with query :attr:`search_query` and downloads all documents returned by search.
-    :param int isABCDEF: 1 to 6(A to F), indicating which subdirectory of Keynumbers to search for. 
-    :param str 
+    A downloader function that executes Westlaw Keynumber search w.r.t. subdirectory(ABCDEF), and collect documents' URLs.
+    :param int isABCDEF: 1 to 6(A to F), indicating which subdirectory of Keynumbers to search for.
+    :param str KeyNumberURL: keynumber-patent page url
     :param int start_from: document index to start downloading from.
-    :returns: a tuple `(doc_content, (index, results_count))`, where `doc_content` is the HTML content of the `index`th document, and `results_count` is the number of documents returned by specified search query.
     """
-    
-    time.sleep(0.5)
-    with wait_for_page_load(self._driver) as pl:
-      KeyNumberURL = self.MoveToWestLawKeyNumber()
 
     selectSet = (
         '//*[@id="coid_browseShowCheckboxes"]',           # 0 Specify Content to Search selection box
@@ -229,31 +225,30 @@ class WestlawURLScraper:
       self._driver.find_element_by_id(selectSet[16]).click()
       self._driver.find_element_by_xpath(selectSet[17]).click()
 
-    docURLsTMP = []
-    docRanksTMP = []
-    docDateTMP = []
-    docCiteTMP = []
     for j in range(int(totalDocNumber)//100 + 1):
+      docURLsTMP = []
+      docTitleTMP = []
+      docDateTMP = []
+      docCiteTMP = []
       if j:
         self._driver.find_element_by_xpath('//a[@id = "co_search_header_pagination_next"]').click()
       self._long_wait.until(self.Westlaw_appears('//span[@class="co_search_titleCount"]', 0))  
       print(j)
       for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/h3/a'):
         docURLsTMP.append(k.get_attribute('href'))
-        docRanksTMP.append(int(k.get_attribute('rank')))
-      for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[1]'):
+        print(k.text)
+        docTitleTMP.append(k.text)
+      for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[2]'):
         docDateTMP.append(k.text)
-      for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[2]'):  
+      for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[3]'):  
         docCiteTMP.append(k.text)
-      zipped = zip(docRanksTMP, docDateTMP, docCiteTMP, docURLsTMP)
-      print(zipped)
+      zippedList = list(zip(docTitleTMP, docDateTMP, docCiteTMP, docURLsTMP))
+      print('zippedList size is ' + str(len(zippedList)))
       with open('docURL_Ver'+str(isABCDEF)+'.csv', 'a', encoding='utf-8', newline='') as f:
         wr = csv.writer(f)
-        for l in zipped:
+        for l in zippedList:
           wr.writerow(l)
-      del docURLsTMP[:]  # clear docURLsTMP
-      del docRanksTMP[:]  # clear docRanksTMP
-      
+
   #   for k in range(totalDocNumber):
   #     print('k is '+str(k))
   #     self._driver.execute_script('window.scrollTo(0,0);') # scroll to top left corner
@@ -296,8 +291,44 @@ class WestlawURLScraper:
   #       pl
   # # end def
 
-  def _get_additional_info(self, ):
-    pass
+  def _get_additional_info(self, docPageURL):
+    '''
+    A downloader function which collects docet number, judges' names, names of plaintiffs and defendants etc.
+    :param str docPageURL
+    '''
+    # after logging in to Westlaw webpage
+    with wait_for_page_load(self._driver) as pl:
+      self._driver.get(docPageURL)
+    names = self._driver.find_element_by_xpath('//*[@class="co_suit"]').text  # get plaintiffs and defendants' names
+    headNote = self._driver.find_element_by_xpath('//*[@id = "co_expandedHeadnotes"]').text
+    q1 = re.compile("US Patent.+(?=( Valid))") # 정규식 for valid patent numbers
+    validPatentRE = q1.search(headNote)
+    q2 = re.compile("US Patent.+(?=( Invalid))") # 정규식 for invalid patent numbers
+    invalidPatentRE = q2.search(headNote)
+
+    if validPatentRE:
+      validPatent = validPatentRE.group()
+      if invalidPatentRE:
+        invalidPatent = invalidPatentRE.group()
+      else: invalidPatent = []
+    else:
+      validPatent = []
+      if invalidPatentRE:
+        invalidPatent = invalidPatentRE.group()
+      else:
+        invalidPatent = []
+    panel = []
+    vote = []
+    for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock co_briefItState co_panelBlock"]/div'): # get 3 judeges' names
+      panel.append(k.text.lower())
+      q4 = re.compile("")
+    if self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span/a'):
+      for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span/a'):
+        vote.append(k.text.lower())
+        panel.remove(k.text.lower())
+    return [validPatent, invalidPatent, panel, vote]
+    # with open("./WestlawHTMLAB/"+citationCode+".html", "wb") as f:
+    #   f.write(self._driver.page_source.encode('utf-8')) # download it in html format
   # end def
 
   def _safe_wait(self, poll_func):
@@ -364,3 +395,53 @@ class wait_for_page_load(object):
       except:
         print('No html dected yet')
         return False
+
+class Data_Merging:
+  def __init__(self, fileNames):
+    self._mergedData = []
+    self.fileNames = fileNames
+    self._cleanedData = []
+
+  def _merge(self): 
+    for i in self.fileNames[:6]:
+      with open(i+'.csv', 'r', encoding='utf-8', newline='') as f:
+        print('Loading splited files')
+        for j in csv.reader(f, delimiter=','):
+          self._mergedData.append(j)
+    print('Length of row MergedData is '+str(len(self._mergedData)))
+    with open(self.fileNames[6]+'.csv', 'w', encoding='utf-8', newline='') as f:  # 파일이 열려있을 때는 w로 차례차례 쓰는 것이 가능. 닫혔다가 다시 열면, w는 덮어씀.
+      writer = csv.writer(f, delimiter=',')
+      for l in self._mergedData:
+        writer.writerow(l)
+    print('Merging Completed')
+
+  def _erase_duplication(self):
+    with open(self.fileNames[6]+'.csv', 'r', encoding='utf-8', newline='') as f:
+      for j in csv.reader(f, delimiter=','):
+        self._cleanedData.append(j)
+
+    prevResult = []
+    for i in range(len(self._cleanedData)):
+      if i:
+        currResult = self._cleanedData[i]
+        if prevResult[2] == currResult[2]:
+          if prevResult[0] == currResult[0]:
+            self._cleanedData[i-1] = []
+      prevResult = self._cleanedData[i]
+
+    for i in self._cleanedData:
+      Inre = re.compile('In re .+')
+      if i:
+        if Inre.search(i[0]):
+          print(i[0])
+          self._cleanedData[self._cleanedData.index(i)] = []
+
+    for j in range(self._cleanedData.count([])):
+      self._cleanedData.remove([])
+    del self._cleanedData[0] # 왜인지 모르겠지만 첫번째에 이상한 값이 나옴.
+    print('Length of simplified MergedData is '+str(len(self._cleanedData)))
+    with open(self.fileNames[7]+'.csv', 'w', encoding='utf-8', newline='') as f:
+      writer = csv.writer(f, delimiter=',')
+      for l in self._cleanedData:
+        writer.writerow(l)
+    print('Cleaning Completed')
