@@ -3,11 +3,51 @@ import time
 import csv
 import re
 
-# downloader = WestlawURLScraper()
-# downloader.logInToSNU()
-# time.sleep(0.5)
-# with wait_for_page_load(downloader._driver) as pl:
-#     KeyNumberURL = downloader.MoveToWestLawKeyNumber()
+judgeNameArray = [
+    'Archer',
+    'Bissell',
+    'Bryson',
+    'Clevenger',
+    'Dyk',
+    'Gajarsa',
+    'Hughes',
+    'Linn',
+    'Lourie',
+    'Mayer',
+    'Michel',
+    'Moore',
+    'Newman',
+    'Plager',
+    'Prost',
+    'Rader',
+    'Schall',
+    'Taranto',
+    'Almond',
+    'Baldwin',
+    'Bennett',
+    'Cowen',
+    'Davis',
+    'Friedman',
+    'Laramore',
+    'Markey',
+    'Miller',
+    'Nies',
+    "O'Malley",
+    'Rich',
+    'Skelton',
+    'Smith',
+    'Wallach',
+    'Nichols',
+    'Reyna',
+    'Stoll',
+    'Chen',
+    'Kashiwa',
+    ]
+downloader = WestlawURLScraper()
+downloader.logInToSNU()
+time.sleep(0.5)
+with wait_for_page_load(downloader._driver) as pl:
+    KeyNumberURL = downloader.MoveToWestLawKeyNumber()
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Downloading URL
@@ -30,29 +70,29 @@ import re
 # DM._erase_duplication()
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# # Downloading more info.
-# with open('CleanedData.csv', 'r', encoding='utf-8', newline='') as f:
-#     for j in csv.reader(f, delimiter=','):
-#         # (validPatent, invalidPatent, Majority, Minority) = downloader._get_additional_info(j[3])
-#         Results = downloader._get_additional_info(j[3])
-#         with open('AddedData.csv', 'a', encoding='utf-8', newline='') as f2:
-#             wr = csv.writer(f2)
-#             print(j+Results)
-#             wr.writerow(j+Results)
+# Downloading more info.
+with open('CleanedData.csv', 'r', encoding='utf-8', newline='') as f:
+    for j in csv.reader(f, delimiter=','):
+        # (validPatent, invalidPatent, Majority, Minority) = downloader._get_additional_info(j[3], judgeNameArray)
+        Results = downloader._get_additional_info(j[3], judgeNameArray)
+        with open('AddedData.csv', 'a', encoding='utf-8', newline='') as f2:
+            wr = csv.writer(f2)
+            print(j+Results)
+            wr.writerow(j+Results)
 
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Collecting US patent, judge identities
-PatentArray = []
-with open('AddedData.csv', 'r', encoding='utf-8', newline='') as f:
-    for i in csv.reader(f, delimiter=','):
-        q1 = re.compile("US Patent.+[,][0-9]{3}(([,]\s)|[.])") # 정규식 for patent numbers
-        PatentRE = q1.search(i[4]) # i[4] for valid patents, i[5] for invalid ones
-        if PatentRE:
-            PatentTMP = PatentRE.group()
-            PatentTMP = str(PatentTMP).split(', ')
-            PatentArray = PatentArray + PatentTMP
+# PatentArray = []
+# with open('AddedData.csv', 'r', encoding='utf-8', newline='') as f:
+#     for i in csv.reader(f, delimiter=','):
+#         q1 = re.compile("US Patent.+[,][0-9]{3}(([,]\s)|[.])") # 정규식 for patent numbers
+#         PatentRE = q1.search(i[4]) # i[4] for valid patents, i[5] for invalid ones
+#         if PatentRE:
+#             PatentTMP = PatentRE.group()
+#             PatentTMP = str(PatentTMP).split(', ')
+#             PatentArray = PatentArray + PatentTMP
 
-print(len(PatentArray))
-print(len(list(set(PatentArray))))
+# print(len(PatentArray))
+# print(len(list(set(PatentArray))))

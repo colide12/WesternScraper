@@ -1,6 +1,5 @@
 import random
 import re
-import requests
 import time
 import os
 
@@ -176,7 +175,7 @@ class WestlawURLScraper:
         "//option[@value='100']"                          # 17 100 documents
         )
     ABCDEF = ('A', 'B', 'C', 'D', 'E', 'F')
-    
+
     i = isABCDEF
     print('Start downloading URL from the subdirectory ' + ABCDEF[i-1])
     self._driver.get(KeyNumberURL)
@@ -215,7 +214,7 @@ class WestlawURLScraper:
       self._driver.find_element_by_id(selectSet[14]).click()
 
     self._long_wait.until(self.Westlaw_appears(selectSet[15], 0)) # wait until the first search result appears
-    
+
     p = re.compile('\(|\)|\,')
     totalDocNumber = int(p.sub('', self._driver.find_element_by_xpath('//span[@class="co_search_titleCount"]').text))  # total document number
     print(totalDocNumber)
@@ -232,7 +231,7 @@ class WestlawURLScraper:
       docCiteTMP = []
       if j:
         self._driver.find_element_by_xpath('//a[@id = "co_search_header_pagination_next"]').click()
-      self._long_wait.until(self.Westlaw_appears('//span[@class="co_search_titleCount"]', 0))  
+      self._long_wait.until(self.Westlaw_appears('//span[@class="co_search_titleCount"]', 0))
       print(j)
       for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/h3/a'):
         docURLsTMP.append(k.get_attribute('href'))
@@ -240,7 +239,7 @@ class WestlawURLScraper:
         docTitleTMP.append(k.text)
       for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[2]'):
         docDateTMP.append(k.text)
-      for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[3]'):  
+      for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[3]'):
         docCiteTMP.append(k.text)
       zippedList = list(zip(docTitleTMP, docDateTMP, docCiteTMP, docURLsTMP))
       print('zippedList size is ' + str(len(zippedList)))
@@ -291,12 +290,15 @@ class WestlawURLScraper:
   #       pl
   # # end def
 
-  def _get_additional_info(self, docPageURL):
+  def _get_additional_info(self, docPageURL, judgeNameArrayUpper):
     '''
     A downloader function which collects docet number, judges' names, names of plaintiffs and defendants etc.
     :param str docPageURL
     '''
     # after logging in to Westlaw webpage
+    judgeNameArray = []
+    for names in judgeNameArrayUpper:
+      judgeNameArray.append(names.lower())
     with wait_for_page_load(self._driver) as pl:
       self._driver.get(docPageURL)
     names = self._driver.find_element_by_xpath('//*[@class="co_suit"]').text  # get plaintiffs and defendants' names
@@ -319,11 +321,20 @@ class WestlawURLScraper:
         invalidPatent = []
     panel = []
     vote = []
+    tmpJudgeName = []
     for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock co_briefItState co_panelBlock"]/div'): # get 3 judeges' names
-      panel.append(k.text.lower())
-      q4 = re.compile("")
-    if self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span/a'):
-      for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span/a'):
+      for k1 in k.text.lower().split(): # A listified sentence of which judges participated
+        if k1[-1] == ',':
+          k1 = k1[:-1]
+        tmpJudgeName.append(k1)
+      print(tmpJudgeName)
+      panel = list(set(tmpJudgeName)&set(judgeNameArray))
+      print(panel)
+
+    if self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span'): # lines to find the minority voters
+      for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span'):
+        print(set(k.text.lower()))
+        print(set(k.text.lower())&set(judgeNameArray.lower()))
         vote.append(k.text.lower())
         panel.remove(k.text.lower())
     return [validPatent, invalidPatent, panel, vote]
@@ -402,7 +413,7 @@ class Data_Merging:
     self.fileNames = fileNames
     self._cleanedData = []
 
-  def _merge(self): 
+  def _merge(self):
     for i in self.fileNames[:6]:
       with open(i+'.csv', 'r', encoding='utf-8', newline='') as f:
         print('Loading splited files')
