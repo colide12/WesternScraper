@@ -132,6 +132,7 @@ class WestlawURLScraper:
       )
     # move to keynumber
     self._long_wait.until(self.Westlaw_appears(WestlawXPath[0], 0))
+    self._driver.set_window_size(1920, 1080)
     keyNumber = self._driver.find_element_by_xpath(WestlawXPath[0]).get_attribute('href')
     self._driver.get(keyNumber)
 
@@ -324,19 +325,29 @@ class WestlawURLScraper:
     tmpJudgeName = []
     for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock co_briefItState co_panelBlock"]/div'): # get 3 judeges' names
       for k1 in k.text.lower().split(): # A listified sentence of which judges participated
-        if k1[-1] == ',':
+        if k1[-1] == ',' or k1[-1] == '.':
           k1 = k1[:-1]
         tmpJudgeName.append(k1)
-      print(tmpJudgeName)
       panel = list(set(tmpJudgeName)&set(judgeNameArray))
-      print(panel)
+      tmpJudgeName = []
+      if len(panel) > 5:
+        panel.append('en banc')
+      print(['Judges in the Panel are '] + panel)
 
-    if self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span'): # lines to find the minority voters
-      for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock x_voteLine"]/span'):
-        print(set(k.text.lower()))
-        print(set(k.text.lower())&set(judgeNameArray.lower()))
-        vote.append(k.text.lower())
-        panel.remove(k.text.lower())
+    if len(panel) < 5 and self._driver.find_elements_by_xpath('//div[@class="co_contentBlock co_briefItState co_synopsis"]/div[@class="co_paragraph"]/div[contains(text(), "dissenting")]'): # lines to find the minority voters
+      print('Dissenting Opinion Detected')
+      for k in self._driver.find_elements_by_xpath('//div[@class="co_contentBlock co_briefItState co_synopsis"]/div[@class="co_paragraph"]/div[contains(text(), "dissenting")]'):
+        for k1 in k.text.lower().split(): # A listified sentence of which judges participated
+          if k1[-1] == ','or k1[-1] == '.':
+            k1 = k1[:-1]
+          tmpJudgeName.append(k1)
+        vote = list(set(tmpJudgeName)&set(judgeNameArray))
+        if set(panel)&set(vote): # Sometime dissenting opinion about en banc is recorded
+          print(vote +[ 'Dissents'])
+          panel.remove(vote[0])
+        else:
+          print('Wrong decection')
+          vote = []
     return [validPatent, invalidPatent, panel, vote]
     # with open("./WestlawHTMLAB/"+citationCode+".html", "wb") as f:
     #   f.write(self._driver.page_source.encode('utf-8')) # download it in html format
