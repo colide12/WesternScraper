@@ -72,7 +72,7 @@ with wait_for_page_load(downloader._driver) as pl:
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Downloading more info.
 with open('CleanedData.csv', 'r', encoding='utf-8', newline='') as f:
-    count = 0
+    count = 1070
     for j in list(csv.reader(f, delimiter=','))[count:]:
         # (validPatent, invalidPatent, Majority, Minority) = downloader._get_additional_info(j[3], judgeNameArray)
         print('count is '+str(count))

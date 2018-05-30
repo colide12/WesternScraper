@@ -43,7 +43,7 @@ class WestlawURLScraper:
   editor_abbreviation = None
   author_abbreviation = None
 
-  def __init__(self, wait_timeouts=(15, 1800)):
+  def __init__(self, wait_timeouts=(15, 18000)):
     """
     Constructs a downloader object.
 
@@ -302,6 +302,7 @@ class WestlawURLScraper:
       judgeNameArray.append(names.lower())
     with wait_for_page_load(self._driver) as pl:
       self._driver.get(docPageURL)
+    self._wait_for_element('//*[@class="co_suit"]')
     names = self._driver.find_element_by_xpath('//*[@class="co_suit"]').text  # get plaintiffs and defendants' names
     headNote = self._driver.find_element_by_xpath('//*[@id = "co_expandedHeadnotes"]').text
     q1 = re.compile("US Patent.+(?=( Valid))") # 정규식 for valid patent numbers
