@@ -84,17 +84,4 @@ with open('CleanedData.csv', 'r', encoding='utf-8', newline='') as f:
 
 
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Collecting US patent, judge identities
-# PatentArray = []
-# with open('AddedData.csv', 'r', encoding='utf-8', newline='') as f:
-#     for i in csv.reader(f, delimiter=','):
-#         q1 = re.compile("US Patent.+[,][0-9]{3}(([,]\s)|[.])") # 정규식 for patent numbers
-#         PatentRE = q1.search(i[4]) # i[4] for valid patents, i[5] for invalid ones
-#         if PatentRE:
-#             PatentTMP = PatentRE.group()
-#             PatentTMP = str(PatentTMP).split(', ')
-#             PatentArray = PatentArray + PatentTMP
 
-# print(len(PatentArray))
-# print(len(list(set(PatentArray))))
