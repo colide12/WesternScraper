@@ -80,7 +80,7 @@ for verdictSample in verdictSampleArrayWEB: # choose a verdict
     panel = validJudgeArray + invalidJudgeArray
 
     if len(panel)<4:
-        verdictSampleArray.append([verdictSample[0], verdictSample[1], verdictSample[2], verdictSample[3], validJudgeArray, invalidJudgeArray, verdictSample[7], verdictSample[7]])
+        verdictSampleArray.append([verdictSample[0], verdictSample[1], verdictSample[2], verdictSample[3], validJudgeArray, invalidJudgeArray, verdictSample[6], verdictSample[7]])
 verdictSampleArray = verdictSampleArray[:-1] # Don't know why but the last element is empty
 
 for judge in judgeNameArray:  # choose a circuit judge
@@ -119,3 +119,9 @@ verdict_Prob_NumOfCitation_Sample = []
 for i, verdictSample in enumerate(verdictSampleArray):
     k = verdictSample+[panelProbArray[i]]
     verdict_Prob_NumOfCitation_Sample.append(k)
+print(verdict_Prob_NumOfCitation_Sample)
+
+for i in verdict_Prob_NumOfCitation_Sample:
+    with open('verdict_Prob_NumOfCitation_Sample.csv', 'a', encoding='utf-8', newline='') as f2:
+            wr = csv.writer(f2)
+            wr.writerow(i)
