@@ -14,6 +14,7 @@ import time
 Collecting US patent, judge identities
 """
 
+
 def nameCleaner(searchIndex, fileName= 'AddedData.csv'):
     resultArray = []
     if searchIndex == 4:

@@ -3,46 +3,18 @@ import time
 import csv
 import re
 
+
 judgeNameArray = [
-    'Archer',
-    'Bissell',
-    'Bryson',
-    'Clevenger',
-    'Dyk',
-    'Gajarsa',
-    'Hughes',
-    'Linn',
-    'Lourie',
-    'Mayer',
-    'Michel',
-    'Moore',
-    'Newman',
-    'Plager',
-    'Prost',
-    'Rader',
-    'Schall',
-    'Taranto',
-    'Almond',
-    'Baldwin',
-    'Bennett',
-    'Cowen',
-    'Davis',
-    'Friedman',
-    'Laramore',
-    'Markey',
-    'Miller',
-    'Nies',
-    "O'Malley",
-    'Rich',
-    'Skelton',
-    'Smith',
-    'Wallach',
-    'Nichols',
-    'Reyna',
-    'Stoll',
-    'Chen',
-    'Kashiwa',
-    ]
+                    'Archer', 'Bissell', 'Bryson', 'Clevenger', 'Dyk',
+                    'Gajarsa', 'Hughes', 'Linn', 'Lourie', 'Mayer',
+                    'Michel', 'Moore', 'Newman', 'Plager', 'Prost',
+                    'Rader', 'Schall', 'Taranto', 'Almond', 'Baldwin',
+                    'Bennett', 'Cowen', 'Davis', 'Friedman', 'Laramore',
+                    'Markey', 'Miller', 'Nies', "O'Malley", 'Rich',
+                    'Skelton', 'Smith', 'Wallach', 'Nichols', 'Reyna',
+                    'Stoll', 'Chen', 'Kashiwa',
+                ]
+
 downloader = WestlawURLScraper()
 downloader.logInToSNU()
 time.sleep(0.5)

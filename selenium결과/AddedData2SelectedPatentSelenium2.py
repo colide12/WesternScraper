@@ -8,7 +8,9 @@ import selenium.webdriver.common.desired_capabilities
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+
 from Westlaw import WestlawURLScraper
+
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 
@@ -57,6 +59,7 @@ class USPTOScraper(WestlawURLScraper):
 
     def returnTables(self, baseURL, patentNumber):
         self._driver.get(baseURL+patentNumber)
+        self._wait_for_element('//table')
         tables = self._driver.find_elements_by_xpath('//table')
 
         return tables
