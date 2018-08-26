@@ -97,7 +97,6 @@ class USPTOScraper(WestlawURLScraper):
             print(pageNumber)
             baseURL = 'http://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&Sect2=HITOFF&p={}&u=%2Fnetahtml%2Fsearch-adv.htm&r=0&f=S&l=50&d=PALL&Query=ref/'
             tables = self.returnTables(baseURL.format(pageNumber),patentNumber) # this is a big table containing citing patents
-            
             try:
                 referingPatentTable = tables[1].find_elements_by_tag_name('tr')[1:]
                 for trs in referingPatentTable:
