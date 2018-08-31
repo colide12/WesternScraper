@@ -47,9 +47,7 @@ class WestlawURLScraper:
     """
     Constructs a downloader object.
 
-    :param  str  url for Westlaw keynumber search. 2 urls stated above.
-    :param float,float wait_timeouts: tuple of `(short, long)` where `short` and `long` are the no. of seconds to wait while page elements are loaded (for Webdriver). `long` timeout is used when waiting for LexisNexis to format documents for mass downloads.
-
+    :param (float,float) wait_timeouts: tuple of `(short, long)` where `short` and `long` are the no. of seconds to wait while page elements are loaded (for Webdriver). `long` timeout is used when waiting for LexisNexis to format documents for mass downloads.
     """
 
     self.profile = self.create_browser_profile()
@@ -58,7 +56,6 @@ class WestlawURLScraper:
     # self._driver.set_window_size(800, 600)
     self._short_wait = WebDriverWait(self._driver, wait_timeouts[0], poll_frequency=0.05)
     self._long_wait = WebDriverWait(self._driver, wait_timeouts[1], poll_frequency=1)
-
   # end def
 
   def logInToSNU(self):
@@ -101,7 +98,7 @@ class WestlawURLScraper:
     else: return g
   # end of def
 
-  def MoveToWestLawKeyNumber(self): # 이거 둘로 쪼개야겠다. lib2westlaw + westlaw2westlaw
+  def MoveToWestLawKeyNumber(self):
 
     # move to academic DB in SNU library
     self._driver.get('http://library.snu.ac.kr/find/databases')
@@ -230,7 +227,7 @@ class WestlawURLScraper:
       docTitleTMP = []
       docDateTMP = []
       docCiteTMP = []
-      if j:
+      if j:  # we don't need to move to next page in the first page
         self._driver.find_element_by_xpath('//a[@id = "co_search_header_pagination_next"]').click()
       self._long_wait.until(self.Westlaw_appears('//span[@class="co_search_titleCount"]', 0))
       print(j)
@@ -242,7 +239,7 @@ class WestlawURLScraper:
         docDateTMP.append(k.text)
       for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[3]'):
         docCiteTMP.append(k.text)
-      zippedList = list(zip(docTitleTMP, docDateTMP, docCiteTMP, docURLsTMP))
+      zippedList = list(zip(docTitleTMP, docDateTMP, docCiteTMP, docURLsTMP))  # each TMP lists collects title, data and url for 100 listed verdicts. zip method collects kth element of each TMP lists and generates one list of kth elements.
       print('zippedList size is ' + str(len(zippedList)))
       with open('docURL_Ver'+str(isABCDEF)+'.csv', 'a', encoding='utf-8', newline='') as f:
         wr = csv.writer(f)
@@ -421,7 +418,6 @@ class wait_for_page_load(object):
 
 class Data_Merging:
   def __init__(self, fileNames):
-    self._mergedData = []
     self.fileNames = fileNames
     self._cleanedData = []
 
@@ -430,22 +426,12 @@ class Data_Merging:
       with open(i+'.csv', 'r', encoding='utf-8', newline='') as f:
         print('Loading splited files')
         for j in csv.reader(f, delimiter=','):
-          self._mergedData.append(j)
-    print('Length of row MergedData is '+str(len(self._mergedData)))
-    with open(self.fileNames[6]+'.csv', 'w', encoding='utf-8', newline='') as f:  # 파일이 열려있을 때는 w로 차례차례 쓰는 것이 가능. 닫혔다가 다시 열면, w는 덮어씀.
-      writer = csv.writer(f, delimiter=',')
-      for l in self._mergedData:
-        writer.writerow(l)
-    print('Merging Completed')
-
-  def _erase_duplication(self):
-    with open(self.fileNames[6]+'.csv', 'r', encoding='utf-8', newline='') as f:
-      for j in csv.reader(f, delimiter=','):
-        self._cleanedData.append(j)
+          self._cleanedData.append(j)
+    print('Length of row MergedData is '+str(len(self._cleanedData)))
 
     prevResult = []
     for i in range(len(self._cleanedData)):
-      if i:
+      if i:  # the first line does not have prevResult to compare. currResult could be possible after i=1
         currResult = self._cleanedData[i]
         if prevResult[2] == currResult[2]:
           if prevResult[0] == currResult[0]:
@@ -463,7 +449,7 @@ class Data_Merging:
       self._cleanedData.remove([])
     del self._cleanedData[0] # 왜인지 모르겠지만 첫번째에 이상한 값이 나옴.
     print('Length of simplified MergedData is '+str(len(self._cleanedData)))
-    with open(self.fileNames[7]+'.csv', 'w', encoding='utf-8', newline='') as f:
+    with open(self.fileNames[6]+'.csv', 'w', encoding='utf-8', newline='') as f:
       writer = csv.writer(f, delimiter=',')
       for l in self._cleanedData:
         writer.writerow(l)

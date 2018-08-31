@@ -15,31 +15,28 @@ judgeNameArray = [
                     'Stoll', 'Chen', 'Kashiwa',
                 ]
 
+# Open a browser and move to Westlaw website through SNU library. And then get URL for the keynumber search.
 downloader = WestlawURLScraper()
 downloader.logInToSNU()
-time.sleep(0.5)
+    time.sleep(0.5)
 with wait_for_page_load(downloader._driver) as pl:
     KeyNumberURL = downloader.MoveToWestLawKeyNumber()
+    # KeyNumberURL: str
+# Downloading URL: each downloaded data stored in docURL_Ver.csv
+for i in range(6):
+    downloader.iter_search_results(i+1, KeyNumberURL)
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Downloading URL
-# for i in range(6):
-#     downloader.iter_search_results(i+1, KeyNumberURL)
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# # Merge downloaded data
-# fileNames = [
-#     'docURL_Ver1',
-#     'docURL_Ver2',
-#     'docURL_Ver3',
-#     'docURL_Ver4',
-#     'docURL_Ver5',
-#     'docURL_Ver6',
-#     'MergedData',
-#     'CleanedData']
-# DM = Data_Merging(fileNames)
-# # DM._merge()
-# DM._erase_duplication()
+# Merge downloaded data
+fileNames = [
+    'docURL_Ver1',
+    'docURL_Ver2',
+    'docURL_Ver3',
+    'docURL_Ver4',
+    'docURL_Ver5',
+    'docURL_Ver6',
+    'CleanedData']
+DM = Data_Merging(fileNames)
+DM._merge()  # merge docURL_Ver files and erase duplicates
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Downloading more info.
