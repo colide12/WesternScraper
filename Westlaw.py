@@ -125,11 +125,13 @@ class WestlawURLScraper:
 
     WestlawXPath = (
         '/html/body/div[1]/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div[1]/ul/li[2]/a',  # keynumber link
-        '/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[3]/ul[3]/li[4]/div/a[1]'  # keynumber-patent link
+        '/html/body/div[1]/div/div[2]/div[3]/div/div/div[2]/div/div/div[3]/ul[3]/li[2]/div/a[1]'
+          # keynumber-patent link
       )
     # move to keynumber
     self._long_wait.until(self.Westlaw_appears(WestlawXPath[0], 0))
-    self._driver.set_window_size(1920, 1080)
+    # self._driver.set_window_size(1920, 1080)
+    self._driver.maximize_window()
     keyNumber = self._driver.find_element_by_xpath(WestlawXPath[0]).get_attribute('href')
     self._driver.get(keyNumber)
 
@@ -202,15 +204,16 @@ class WestlawURLScraper:
       print('waiting for search results to appear')
 
     with wait_for_page_load(self._driver) as pl:
-      print('waiting for data to appear')
       self._long_wait.until(self.Westlaw_appears(selectSet[15], 0))  # wait for date to appear
+      if self._driver.find_elements_by_xpath('//*[@id="coid_website_cookiePolicyAcknowledged"]'):  # if there is nothing returns empty list!!
+        self._driver.find_element_by_xpath('//*[@id="coid_website_cookiePolicyAcknowledged"]').click()  # close cookie-related something
       self._driver.execute_script('window.scrollBy(0,250)', '')
       self._driver.find_element_by_id(selectSet[11]).click()
       self._driver.find_element_by_link_text(selectSet[12]).click()
       self._driver.find_element_by_id(selectSet[13]).clear()
       self._driver.find_element_by_id(selectSet[13]).send_keys("1982.10.01")
       self._driver.find_element_by_id(selectSet[14]).click()
-
+    print('setting search period')
     self._long_wait.until(self.Westlaw_appears(selectSet[15], 0)) # wait until the first search result appears
 
     p = re.compile('\(|\)|\,')
@@ -221,7 +224,6 @@ class WestlawURLScraper:
       self._driver.execute_script('window.scrollTo(0, document.body.scrollHeight)')  # scroll down to the bottom to change the number of documents in one page
       self._driver.find_element_by_id(selectSet[16]).click()
       self._driver.find_element_by_xpath(selectSet[17]).click()
-
     for j in range(int(totalDocNumber)//100 + 1):
       docURLsTMP = []
       docTitleTMP = []
@@ -241,7 +243,7 @@ class WestlawURLScraper:
         docCiteTMP.append(k.text)
       zippedList = list(zip(docTitleTMP, docDateTMP, docCiteTMP, docURLsTMP))  # each TMP lists collects title, data and url for 100 listed verdicts. zip method collects kth element of each TMP lists and generates one list of kth elements.
       print('zippedList size is ' + str(len(zippedList)))
-      with open('docURL_Ver'+str(isABCDEF)+'.csv', 'a', encoding='utf-8', newline='') as f:
+      with open('abcd/docURL_Ver.csv', 'a', encoding='utf-8', newline='') as f:
         wr = csv.writer(f)
         for l in zippedList:
           wr.writerow(l)
@@ -422,12 +424,9 @@ class Data_Merging:
     self._cleanedData = []
 
   def _merge(self):
-    for i in self.fileNames[:6]:
-      with open(i+'.csv', 'r', encoding='utf-8', newline='') as f:
-        print('Loading splited files')
-        for j in csv.reader(f, delimiter=','):
-          self._cleanedData.append(j)
-    print('Length of row MergedData is '+str(len(self._cleanedData)))
+    with open(self.fileNames[0]+'.csv', 'r', encoding='utf-8', newline='') as f:
+      print('Loading splited files')
+      self._cleanedData = list(csv.reader(f, delimiter=','))
 
     prevResult = []
     for i in range(len(self._cleanedData)):
@@ -449,8 +448,8 @@ class Data_Merging:
       self._cleanedData.remove([])
     del self._cleanedData[0] # 왜인지 모르겠지만 첫번째에 이상한 값이 나옴.
     print('Length of simplified MergedData is '+str(len(self._cleanedData)))
-    with open(self.fileNames[6]+'.csv', 'w', encoding='utf-8', newline='') as f:
-      writer = csv.writer(f, delimiter=',')
+    with open(self.fileNames[1]+'.txt', 'w', encoding='utf-8', newline='') as f:
+      writer = csv.writer(f, delimiter='\t')
       for l in self._cleanedData:
         writer.writerow(l)
     print('Cleaning Completed')
