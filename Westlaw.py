@@ -18,6 +18,9 @@ from selenium.webdriver.common.by import By
 import csv
 import pprint
 
+import pandas as pd
+
+
 class WestlawURLScraper:
   """
   Class for downloading URLs of documents w.r.t. patent invalidity in Westlaw database using the Keynumber search.
@@ -146,7 +149,7 @@ class WestlawURLScraper:
     try: self._driver.quit()
     except: pass
 
-  def iter_search_results(self, isABCDEF, KeyNumberURL, start_from=1):
+  def iter_search_results(self, isABCDEF, KeyNumberURL, fileNames, start_from=1):
     """
     A downloader function that executes Westlaw Keynumber search w.r.t. subdirectory(ABCDEF), and collect documents' URLs.
     :param int isABCDEF: 1 to 6(A to F), indicating which subdirectory of Keynumbers to search for.
@@ -218,13 +221,14 @@ class WestlawURLScraper:
 
     p = re.compile('\(|\)|\,')
     totalDocNumber = int(p.sub('', self._driver.find_element_by_xpath('//span[@class="co_search_titleCount"]').text))  # total document number
-    print(totalDocNumber)
+    print("The number of documents is %s" %totalDocNumber)
 
     with wait_for_page_load(self._driver) as pl:
       self._driver.execute_script('window.scrollTo(0, document.body.scrollHeight)')  # scroll down to the bottom to change the number of documents in one page
       self._driver.find_element_by_id(selectSet[16]).click()
       self._driver.find_element_by_xpath(selectSet[17]).click()
     for j in range(int(totalDocNumber)//100 + 1):
+      print('Processing page %s' %j)
       docURLsTMP = []
       docTitleTMP = []
       docDateTMP = []
@@ -232,10 +236,8 @@ class WestlawURLScraper:
       if j:  # we don't need to move to next page in the first page
         self._driver.find_element_by_xpath('//a[@id = "co_search_header_pagination_next"]').click()
       self._long_wait.until(self.Westlaw_appears('//span[@class="co_search_titleCount"]', 0))
-      print(j)
       for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/h3/a'):
         docURLsTMP.append(k.get_attribute('href'))
-        print(k.text)
         docTitleTMP.append(k.text)
       for k in self._driver.find_elements_by_xpath('//div[@class="co_searchContent"]/div[@class = "co_searchResults_citation"]/span[2]'):
         docDateTMP.append(k.text)
@@ -243,52 +245,10 @@ class WestlawURLScraper:
         docCiteTMP.append(k.text)
       zippedList = list(zip(docTitleTMP, docDateTMP, docCiteTMP, docURLsTMP))  # each TMP lists collects title, data and url for 100 listed verdicts. zip method collects kth element of each TMP lists and generates one list of kth elements.
       print('zippedList size is ' + str(len(zippedList)))
-      with open('abcd/docURL_Ver.csv', 'a', encoding='utf-8', newline='') as f:
-        wr = csv.writer(f)
+      with open(fileNames[0], 'a', encoding='utf-8', newline='') as f:
+        wr = csv.writer(f, delimiter=',')
         for l in zippedList:
           wr.writerow(l)
-
-  #   for k in range(totalDocNumber):
-  #     print('k is '+str(k))
-  #     self._driver.execute_script('window.scrollTo(0,0);') # scroll to top left corner
-  #     nextDocButtonXpath = '//*[@id="co_documentFooterResultsNavigationNext"]'
-  #     self._wait_for_element(nextDocButtonXpath)
-  #     if self._driver.find_element_by_xpath('//*[@id="courtline"]').text == 'United States Court of Appeals, Federal Circuit.':
-  #       q1 = re.compile("[0-9]{4}") # get **** (**** can be any number)
-  #       q2 = re.compile("[a-zA-Z]*")      # get month name
-  #       m1 = q1.search(self._driver.find_element_by_xpath('//*[@id="filedate"]').text)
-  #       m2 = q2.search(self._driver.find_element_by_xpath('//*[@id="filedate"]').text)
-
-  #       if (int(m1.group()) > 1982)|((m1.group() == 1982) & (m2.group() in ('October', 'November', 'December'))):
-  #         docTitle = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[1]/div/div[1]/div/h2/span/a').text # current document name
-  #         citationCode = self._driver.find_element_by_xpath('//*[@id="cite0"]').text # current citation code
-  #         print(docTitle)
-  #         self._driver.execute_script('window.scrollTo(0,0);')
-  #         # self._long_wait.until(self.Westlaw_appears('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span',0))
-  #         # docketNumber = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div[1]/span').text
-  #         # plaintiffNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[1]').text
-  #         # plaintiffName = plaintiffNameOR[:len(plaintiffNameOR)-len(', Plaintiff–Appellee,')]
-  #         # defendantNameOR = self._driver.find_element_by_xpath('/html/body/div[1]/div/div[2]/div[2]/div/div/div[5]/div/div[2]/div/div[5]/div/div[3]').text
-  #         # defendantName = defendantNameOR[:len(defendantNameOR) - len(', Defendant–Appellant.')]
-  #         # self.tmp = ((i, k), docTitle, citationCode, docketNumber, plaintiffName, defendantName)
-  #         # self.ResultsSet.add(self.tmp)
-  #         if i == 0:
-  #           with open("./WestlawHTMLAB/"+citationCode+".html", "wb") as f:
-  #             f.write(self._driver.page_source.encode('utf-8')) # download it in html format
-  #         elif i == 1:
-  #           with open("./WestlawHTMLCD/"+citationCode+".html", "wb") as f:
-  #             f.write(self._driver.page_source.encode('utf-8')) # download it in html format
-  #         else:
-  #           with open("./WestlawHTMLEF/"+citationCode+".html", "wb") as f:
-  #             f.write(self._driver.page_source.encode('utf-8')) # download it in html format
-  #         # end if
-  #       # end if
-  #     # end if
-  #   # end for
-  #     with wait_for_page_load(self._driver) as pl:
-  #       self._driver.find_element_by_xpath(nextDocButtonXpath).click()
-  #       pl
-  # # end def
 
   def _get_additional_info(self, docPageURL, judgeNameArrayUpper):
     '''
@@ -421,11 +381,11 @@ class wait_for_page_load(object):
 class Data_Merging:
   def __init__(self, fileNames):
     self.fileNames = fileNames
-    self._cleanedData = []
 
   def _merge(self):
-    with open(self.fileNames[0]+'.csv', 'r', encoding='utf-8', newline='') as f:
-      print('Loading splited files')
+    parser = lambda date: pd.datetime.strptime(date, '%m%d%Y')
+    DF_verdictURL = pd.read_csv(self.fileNames[0], names= ['Title', 'VerdictDate', 'CitationCode', 'URL'], parse_dates=['verdictDate'], date_parser=parser)
+    with open(self.fileNames[0], 'r', encoding='utf-8', newline='') as f:
       self._cleanedData = list(csv.reader(f, delimiter=','))
 
     prevResult = []

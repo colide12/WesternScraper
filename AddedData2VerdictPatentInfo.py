@@ -13,31 +13,31 @@ import time
 
 
 def getPatentNumber(list, utilityPatentRE):
-    patentNumberStr = judgeNameStr2List(list)
-    patentNumberStr = utilityPatentRE.search(patentNumberStr)
+    """
+    This function is to gather only utility patents, whose names are made up of integers, not RE or D or P
+    """
     patentNumberArray = []
-    if patentNumberStr:
-        patentNumberArray = patentNumberStr.group().split(', ')
-        for j in patentNumberArray:
-            j = j.replace(",","")   # Erase ','
+    for i in judgeNameStr2List(list):
+        if utilityPatentRE.match(i):
+            a = int(i)
+            patentNumberArray.append(a)
     return patentNumberArray
 
-def nameCleaner(searchIndex, fileName= 'AddedData.txt'):
+def nameCleaner(searchIndex, fileName= 'AddedData.csv'):
     resultArray = []
     if (searchIndex == 4) or (searchIndex == 5): pass
     else:
         print('---Put in integers 4, or 5 for clearing patent numbers---')
         raise ValueError
-    q1 = re.compile("[0-9]{1}[,][0-9]{3}[,][0-9]{3}") # 정규식 for patent numbers
+    q1 = re.compile("[0-9]{6,8}") # 정규식 for patent numbers
     with open(fileName, 'r', encoding='utf-8', newline='') as f:
         for i in list(csv.reader(f, delimiter='\t')):
-            # resultRE = q1.search(i[searchIndex]) # i[4] for valid patents, i[5] for invalid ones
+            # i[4] for valid patents, i[5] for invalid ones
             patentNumberArray = getPatentNumber(i[searchIndex], q1)
             invalidPatentNumberArray = getPatentNumber(i[5], q1)
             if searchIndex == 4:
                 patentNumberArray = list(set(patentNumberArray) - set(invalidPatentNumberArray))
             if patentNumberArray:
-                # resultTMP = resultRE.group()
                 for j in patentNumberArray:
                     verdictDate = i[1]
                     if searchIndex == 4:
@@ -54,16 +54,17 @@ def judgeNameStr2List(dirtyList):
     """
     Sadly, a list of judges saved in csv files changed to str. This fnc is for transforming the str into a list again
     """
-    JudgeArray = ''
+    JudgeArrayStr = ''
     if '[' in dirtyList:
         dirtyList = dirtyList[1:-1]
     if dirtyList:
         for letters in dirtyList:
-            JudgeArray = JudgeArray+letters
+            JudgeArrayStr = JudgeArrayStr+letters
+    JudgeArray = JudgeArrayStr.replace(",", "").replace("'", "").replace(".","").split() # to change o'malle y into omalley
     return JudgeArray
 
 def judgeNameCleaner(defectedName):
-    validJudgeArray = judgeNameStr2List(defectedName).replace("'", "").split(', ') # to change o'malle y into omalley
+    validJudgeArray = judgeNameStr2List(defectedName)
     if '' in validJudgeArray:
         validJudgeArray.remove('')
     return validJudgeArray
@@ -79,15 +80,19 @@ def invalidationProbability(probArray):
 
 
 if __name__ == '__main__':
+    verdictSampleArray = []
     for verdict in [0,1]:
         for index, validPatent in enumerate(nameCleaner(verdict+4), 1): # [patentNumber, verdictDate, validatedJudge, invalidatedJudge]
-            verdictDate = datetime.date(parse(validPatent[1])).strftime('%Y%m%d')
-            verdictSample = [validPatent[0].replace(',', ''), verdict, verdictDate, validPatent[2], validPatent[3]]
-            with open('VerdictPatentInfo.csv', 'a', encoding='utf-8', newline='') as f2:
-                wr = csv.writer(f2)
-                wr.writerow(verdictSample)
-
+            validJudgeArray = judgeNameCleaner(validPatent[2])
+            invalidJudgeArray = judgeNameCleaner(validPatent[3])
+            panel = validJudgeArray + invalidJudgeArray
+            if len(panel)<4:  # non en-banc
+                verdictDate = datetime.date(parse(validPatent[1])).strftime('%Y%m%d')
+                verdictSampleArray.append([validPatent[0], verdict, verdictDate, validJudgeArray, invalidJudgeArray])
+                # verdictSample = [PATNO, verdict, verdictDate, validatedJudge, invalidatedJudge]
+            # print(validPatent[0])
     print('Saving VerdictPatentInfo completed')
+    print(len(verdictSampleArray))
     judgeNameArray = (
                         'archer', 'bissell', 'bryson', 'clevenger', 'dyk',
                         'gajarsa', 'hughes', 'linn', 'lourie', 'mayer',
@@ -105,21 +110,6 @@ if __name__ == '__main__':
     for judge in judgeNameArray:
         invalidationDict.setdefault(judge, 0)
         participationDict.setdefault(judge, 0)
-
-    with open('VerdictPatentInfo.csv', 'r', encoding='utf-8', newline='') as f:
-        verdictSampleArrayWEB = list(csv.reader(f, delimiter=','))
-
-    verdictSampleArray = []
-    for verdictSample in verdictSampleArrayWEB: # choose a verdict
-        # verdictSample = [PATNO, verdict, verdictDate, validPatent[2], validPatent[3]]
-
-        validJudgeArray = judgeNameCleaner(verdictSample[3])
-        invalidJudgeArray = judgeNameCleaner(verdictSample[4])
-        panel = validJudgeArray + invalidJudgeArray
-
-        if len(panel)<4:  # non en-banc
-            verdictSampleArray.append([verdictSample[0], verdictSample[1], verdictSample[2], validJudgeArray, invalidJudgeArray])
-    verdictSampleArray = verdictSampleArray[:-1] # Don't know why but the last element is empty
 
     for judge in judgeNameArray:  # choose a circuit judge
         decision = 0
@@ -152,5 +142,4 @@ if __name__ == '__main__':
         with open('VerdictPatentInfoWithProb.csv', 'a', encoding='utf-8', newline='') as f2:
                 wr = csv.writer(f2)
                 wr.writerow(i)
-
     print('saving VerdictPatentInfoWithProb completed')

@@ -4,7 +4,7 @@ These set of py files are intended to scrape Westlaw website for patent invalida
 
 MainCrawler:
     -Westlaw
-        WestlawURLScraper: A class to get urls for invalidation verdicts, output is docURL_Ver.csv.
+        WestlawURLScraper: A class to get urls for invalidation verdicts, output is verdictDocURL_Date_Number.csv.
         Then uses CleanedData to download patents subject to verdicts, panel members, and their votes. Output is AddedData.csv.
         Data_Merging: Merges docURL_Ver.csv and erase duplicates. CleanedData.csv is an output.
 
